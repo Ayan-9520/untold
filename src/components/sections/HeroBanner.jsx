@@ -2,8 +2,10 @@ import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import Button from '../ui/Button';
-import { PlayIcon, InfoIcon, ChevronLeftIcon, ChevronRightIcon } from '../icons';
+import { PlayIcon, InfoIcon, ChevronLeftIcon, ChevronRightIcon, BookmarkIcon } from '../icons';
 import { heroSlides as defaultSlides } from '../../data/heroSlides';
+import { getVideoById } from '../../data/videoCatalog';
+import { useWatchlist } from '../../context/WatchlistContext';
 import HeroTitle from './HeroTitle';
 import HeroPosterLightbox from './HeroPosterLightbox';
 import HeroFanCards from './HeroFanCards';
@@ -18,6 +20,9 @@ export default function HeroBanner({ content }) {
   const [paused, setPaused] = useState(false);
 
   const slide = slides[index];
+  const featured = slide.featuredId ? getVideoById(slide.featuredId) : null;
+  const { isInWatchlist, toggleWatchlist } = useWatchlist();
+  const inList = featured ? isInWatchlist(featured.id) : false;
   const fullSrc =
     slide.fullImage || slide.cardImage || slide.posterImage || slide.heroImage;
   const watchLink = slide.featuredId ? `/video/${slide.featuredId}` : '/originals';
@@ -109,8 +114,23 @@ export default function HeroBanner({ content }) {
                 <p className="hero-eyebrow mb-2 sm:mb-3">
                   {slide.eyebrow || 'UNTOLD ORIGINALS'}
                 </p>
+                {(slide.sport || slide.pillar || slide.format) && (
+                  <div className="hero-meta-tags mb-3 sm:mb-4">
+                    {slide.sport && <span className="hero-meta-tag">{slide.sport}</span>}
+                    {slide.pillar && <span className="hero-meta-tag hero-meta-tag--gold">{slide.pillar}</span>}
+                    {slide.format && <span className="hero-meta-tag">{slide.format}</span>}
+                  </div>
+                )}
                 <HeroTitle featuredTitle={slide.featuredTitle} />
                 <p className="hero-tagline mt-3 sm:mt-4 mx-auto lg:mx-0">{slide.featuredTagline}</p>
+
+                <div className="hero-ott-meta mt-4 flex flex-wrap gap-2 justify-center lg:justify-start text-xs text-white/75">
+                  {featured?.duration && <span className="hero-ott-badge">{featured.duration}</span>}
+                  {featured?.year && <span className="hero-ott-badge">{featured.year}</span>}
+                  <span className="hero-ott-badge hero-ott-badge--gold">4K</span>
+                  {featured?.rating && <span className="hero-ott-badge">{featured.rating}</span>}
+                  <span className="hero-ott-badge">{featured?.language || 'English'}</span>
+                </div>
 
                 <div className="mt-5 sm:mt-7 flex flex-wrap gap-3 justify-center lg:justify-start">
                   <Link to={watchLink}>
@@ -122,14 +142,34 @@ export default function HeroBanner({ content }) {
                       {slide.cta || 'Watch Now'}
                     </Button>
                   </Link>
+                  <Link to={`${watchLink}?trailer=1`}>
+                    <Button
+                      variant="secondary"
+                      size="lg"
+                      className="bg-white/12 text-white hover:bg-white/20 border border-white/20 backdrop-blur-sm font-semibold min-w-[130px]"
+                    >
+                      Watch Trailer
+                    </Button>
+                  </Link>
+                  {featured && (
+                    <Button
+                      variant="secondary"
+                      size="lg"
+                      icon={<BookmarkIcon className="w-5 h-5" filled={inList} />}
+                      onClick={() => toggleWatchlist(featured)}
+                      className="bg-white/8 text-white hover:bg-white/15 border border-white/15"
+                    >
+                      {inList ? 'In List' : 'My List'}
+                    </Button>
+                  )}
                   <Link to="/originals">
                     <Button
                       variant="secondary"
                       size="lg"
                       icon={<InfoIcon className="w-5 h-5" />}
-                      className="bg-white/12 text-white hover:bg-white/20 border border-white/20 backdrop-blur-sm font-semibold"
+                      className="bg-white/8 text-white hover:bg-white/15 border border-white/15 font-semibold"
                     >
-                      {slide.secondaryCta || 'Explore Originals'}
+                      {slide.secondaryCta || 'Explore'}
                     </Button>
                   </Link>
                 </div>

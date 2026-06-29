@@ -7,7 +7,6 @@ import sqlalchemy as sa
 from sqlalchemy import (
     Boolean,
     DateTime,
-    Enum,
     ForeignKey,
     Integer,
     String,
@@ -18,7 +17,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.db.base import Base
+from app.db.base import Base, StrEnum
 
 
 class NewsType(str, enum.Enum):
@@ -82,7 +81,7 @@ class NewsSource(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     name: Mapped[str] = mapped_column(String(150), nullable=False)
-    source_type: Mapped[NewsSourceType] = mapped_column(Enum(NewsSourceType), nullable=False, index=True)
+    source_type: Mapped[NewsSourceType] = mapped_column(StrEnum(NewsSourceType), nullable=False, index=True)
     url: Mapped[str | None] = mapped_column(String(1000), nullable=True)
     sport: Mapped[str | None] = mapped_column(String(80), nullable=True, index=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
@@ -115,10 +114,10 @@ class NewsArticle(Base):
 
     sport: Mapped[str] = mapped_column(String(80), nullable=False, index=True)
     news_type: Mapped[NewsType] = mapped_column(
-        Enum(NewsType), default=NewsType.FEATURE, nullable=False, index=True
+        StrEnum(NewsType), default=NewsType.FEATURE, nullable=False, index=True
     )
     status: Mapped[NewsStatus] = mapped_column(
-        Enum(NewsStatus), default=NewsStatus.DRAFT, nullable=False, index=True
+        StrEnum(NewsStatus), default=NewsStatus.DRAFT, nullable=False, index=True
     )
     is_breaking: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, index=True)
     is_trending: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, index=True)

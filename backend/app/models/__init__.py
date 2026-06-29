@@ -1,10 +1,10 @@
 from datetime import datetime
 import enum
 
-from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, Integer, String, Text, UniqueConstraint, func
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.db.base import Base
+from app.db.base import Base, StrEnum
 
 
 class UserRole(str, enum.Enum):
@@ -49,7 +49,7 @@ class User(Base):
     full_name: Mapped[str] = mapped_column(String(255), nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     is_admin: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-    role: Mapped[UserRole] = mapped_column(Enum(UserRole), default=UserRole.USER, nullable=False)
+    role: Mapped[UserRole] = mapped_column(StrEnum(UserRole), default=UserRole.USER, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
@@ -103,7 +103,7 @@ class Video(Base):
     stream_key: Mapped[str | None] = mapped_column(String(500), nullable=True)
     hls_url: Mapped[str | None] = mapped_column(String(1000), nullable=True)
     access_tier: Mapped[str] = mapped_column(String(20), default="free", nullable=False, index=True)
-    video_type: Mapped[VideoType] = mapped_column(Enum(VideoType), default=VideoType.DOCUMENTARY, nullable=False)
+    video_type: Mapped[VideoType] = mapped_column(StrEnum(VideoType), default=VideoType.DOCUMENTARY, nullable=False)
     is_featured: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     is_trending: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     views_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
@@ -136,9 +136,9 @@ class Subscription(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False)
-    plan: Mapped[SubscriptionPlan] = mapped_column(Enum(SubscriptionPlan), default=SubscriptionPlan.FREE, nullable=False)
+    plan: Mapped[SubscriptionPlan] = mapped_column(StrEnum(SubscriptionPlan), default=SubscriptionPlan.FREE, nullable=False)
     status: Mapped[SubscriptionStatus] = mapped_column(
-        Enum(SubscriptionStatus), default=SubscriptionStatus.ACTIVE, nullable=False
+        StrEnum(SubscriptionStatus), default=SubscriptionStatus.ACTIVE, nullable=False
     )
     started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
@@ -156,7 +156,7 @@ class Analytics(Base):
     __tablename__ = "analytics"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-    event_type: Mapped[AnalyticsEventType] = mapped_column(Enum(AnalyticsEventType), nullable=False, index=True)
+    event_type: Mapped[AnalyticsEventType] = mapped_column(StrEnum(AnalyticsEventType), nullable=False, index=True)
     user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), index=True, nullable=True)
     video_id: Mapped[int | None] = mapped_column(ForeignKey("videos.id", ondelete="SET NULL"), index=True, nullable=True)
     metadata_json: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -187,7 +187,7 @@ class LocalizationJob(Base):
     target_languages: Mapped[str] = mapped_column(Text, nullable=False)  # JSON array
     transcript: Mapped[str | None] = mapped_column(Text, nullable=True)
     status: Mapped[LocalizationStatus] = mapped_column(
-        Enum(LocalizationStatus), default=LocalizationStatus.PENDING, nullable=False, index=True
+        StrEnum(LocalizationStatus), default=LocalizationStatus.PENDING, nullable=False, index=True
     )
     progress: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     steps_json: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -252,6 +252,7 @@ from app.models.live import (  # noqa: E402, F401
     MatchStat,
     MatchStatus,
 )
+from app.models.studio import AIAgentJob, Production  # noqa: E402, F401
 from app.models.monetization import (  # noqa: E402, F401
     AccessTier,
     Invoice,

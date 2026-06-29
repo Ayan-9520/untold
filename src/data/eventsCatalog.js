@@ -173,8 +173,8 @@ export const eventsCatalog = [
     { location: 'Pakistan' }
   ),
   evt(
-    'evt-fifa-wc',
-    'FIFA World Cup 2026',
+    'evt-world-cup-2026',
+    'World Cup 2026',
     'Football',
     '2026-11-11',
     '2026-12-19',
@@ -389,14 +389,14 @@ export const eventShorts = [
   { id: 'es-6', eventId: 'evt-ufc-305', title: 'Round 1 Knockdown', sport: 'MMA', duration: '0:35', thumbnail: IMG.MMA, views: '1.5M' },
   { id: 'es-7', eventId: 'evt-french-open', title: '42-Shot Rally — Final', sport: 'Tennis', duration: '1:12', thumbnail: IMG.Tennis, views: '720K' },
   { id: 'es-8', eventId: 'evt-icc-cwc', title: 'WC Promo — Greatest Catches', sport: 'Cricket', duration: '0:58', thumbnail: IMG.Cricket, views: '210K' },
-  { id: 'es-9', eventId: 'evt-fifa-wc', title: 'Road to 2026 — Best Goals', sport: 'Football', duration: '1:05', thumbnail: IMG.Football, views: '540K' },
+  { id: 'es-9', eventId: 'evt-world-cup-2026', title: 'Road to 2026 — Best Goals', sport: 'Football', duration: '1:05', thumbnail: IMG.Football, views: '540K' },
   { id: 'es-10', eventId: 'evt-olympics-la', title: 'Bolt\'s Legacy — 9.58', sport: 'Olympics', duration: '0:45', thumbnail: IMG.Olympics, views: '980K' },
 ];
 
 export const eventStories = [
   { id: 'est-1', eventId: 'evt-icc-cwc', title: 'World Cup Preview: India\'s Quest', sport: 'Cricket', duration: '12 min', thumbnail: IMG.Cricket, type: 'preview' },
   { id: 'est-2', eventId: 'evt-ind-pak', title: 'India vs Pakistan: More Than Cricket', sport: 'Cricket', duration: '18 min', thumbnail: IMG.Cricket, type: 'rivalry' },
-  { id: 'est-3', eventId: 'evt-fifa-wc', title: 'FIFA 2026: North America United', sport: 'Football', duration: '15 min', thumbnail: IMG.Football, type: 'preview' },
+  { id: 'est-3', eventId: 'evt-world-cup-2026', title: 'World Cup 2026: North America United', sport: 'Football', duration: '15 min', thumbnail: IMG.Football, type: 'preview' },
   { id: 'est-4', eventId: 'evt-el-clasico', title: 'El Clásico Tactical Breakdown', sport: 'Football', duration: '10 min', thumbnail: IMG.Football, type: 'analysis' },
   { id: 'est-5', eventId: 'evt-wimbledon', title: 'Wimbledon: Grass Court Kings', sport: 'Tennis', duration: '14 min', thumbnail: IMG.Tennis, type: 'legacy' },
   { id: 'est-6', eventId: 'evt-f1-british', title: 'Silverstone: Hamilton\'s Homecoming', sport: 'Formula 1', duration: '11 min', thumbnail: IMG['Formula 1'], type: 'preview' },

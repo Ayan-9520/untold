@@ -4,6 +4,7 @@ import {
 } from 'recharts';
 import ChartCard from '../components/ChartCard';
 import StatCard from '../components/StatCard';
+import AdminErrorBanner from '../components/AdminErrorBanner';
 import { DownloadIcon, EyeIcon, TrendingUpIcon } from '../components/AdminIcons';
 import { dashboard } from '../api/adminApi';
 
@@ -13,12 +14,18 @@ const tooltipStyle = { backgroundColor: '#141414', border: '1px solid #2a2a2a', 
 export default function AnalyticsPage() {
   const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  useEffect(() => {
+  const load = () => {
+    setLoading(true);
+    setError(null);
     dashboard.getAnalytics()
       .then(setAnalytics)
+      .catch((err) => setError(err.message || 'Failed to load analytics'))
       .finally(() => setLoading(false));
-  }, []);
+  };
+
+  useEffect(() => { load(); }, []);
 
   const exportReport = () => {
     const report = JSON.stringify(analytics, null, 2);
@@ -31,6 +38,15 @@ export default function AnalyticsPage() {
   };
 
   if (loading) return <div className="h-96 rounded-xl skeleton" />;
+
+  if (error && !analytics) {
+    return (
+      <div className="space-y-4">
+        <h1 className="text-2xl font-bold dark:text-untold-white light:text-black">Analytics</h1>
+        <AdminErrorBanner message={error} onRetry={load} />
+      </div>
+    );
+  }
 
   const eventData = Object.entries(analytics?.events_by_type || {}).map(([name, value]) => ({
     name: name.replace(/_/g, ' '),

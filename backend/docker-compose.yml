@@ -44,9 +44,11 @@ services:
       CELERY_BROKER_URL: redis://redis:6379/1
       CELERY_RESULT_BACKEND: redis://redis:6379/2
       SECRET_KEY: ${SECRET_KEY:?SECRET_KEY must be set}
-      ENVIRONMENT: production
-      DEBUG: "false"
+      ENVIRONMENT: ${ENVIRONMENT:-development}
+      DEBUG: ${DEBUG:-true}
+      RUN_MIGRATIONS: "true"
       SEED_DATABASE: ${SEED_DATABASE:-false}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@untold.com}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
       CORS_ORIGINS: http://localhost:5173,http://localhost:3000
       RATE_LIMIT_ENABLED: "true"
@@ -60,14 +62,14 @@ services:
     build: .
     container_name: untold_celery_worker
     restart: unless-stopped
-    command: celery -A app.workers.celery_app worker --loglevel=info
+    entrypoint: ["celery", "-A", "app.workers.celery_app", "worker", "--loglevel=info"]
     environment:
       DATABASE_URL: postgresql://untold:untold_secret@db:5432/untold_db
       REDIS_URL: redis://redis:6379/0
       CELERY_BROKER_URL: redis://redis:6379/1
       CELERY_RESULT_BACKEND: redis://redis:6379/2
       SECRET_KEY: ${SECRET_KEY:?SECRET_KEY must be set}
-      ENVIRONMENT: production
+      ENVIRONMENT: ${ENVIRONMENT:-development}
     depends_on:
       db:
         condition: service_healthy
@@ -78,14 +80,14 @@ services:
     build: .
     container_name: untold_celery_beat
     restart: unless-stopped
-    command: celery -A app.workers.celery_app beat --loglevel=info
+    entrypoint: ["celery", "-A", "app.workers.celery_app", "beat", "--loglevel=info"]
     environment:
       DATABASE_URL: postgresql://untold:untold_secret@db:5432/untold_db
       REDIS_URL: redis://redis:6379/0
       CELERY_BROKER_URL: redis://redis:6379/1
       CELERY_RESULT_BACKEND: redis://redis:6379/2
       SECRET_KEY: ${SECRET_KEY:?SECRET_KEY must be set}
-      ENVIRONMENT: production
+      ENVIRONMENT: ${ENVIRONMENT:-development}
       NEWS_FETCH_INTERVAL_MINUTES: 15
     depends_on:
       redis:

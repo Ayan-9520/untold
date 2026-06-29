@@ -7,6 +7,9 @@ import Chip from '../../components/ui/Chip';
 import { videos, categories } from '../api/adminApi';
 import { CONTENT_PILLARS } from '../../data/contentPillars';
 import { PlusIcon } from '../components/AdminIcons';
+import StudioPageHeader from '../components/StudioPageHeader';
+import PipelineBar from '../components/PipelineBar';
+import { PRODUCTS } from '../../config/ecosystem';
 
 export default function ContentPage() {
   const [activePillar, setActivePillar] = useState('originals');
@@ -102,23 +105,23 @@ export default function ContentPage() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold dark:text-untold-white light:text-black">Content Management</h1>
-          <p className="text-sm dark:text-untold-muted light:text-gray-500 mt-1">
-            Manage all UNTOLD content pillars — upload once, AI localizes globally
-          </p>
-        </div>
+      <StudioPageHeader
+        section="Publish"
+        title="Publishing CMS"
+        description={`Upload, schedule, and publish documentaries to ${PRODUCTS.ORIGINALS.name}.`}
+      >
         {!isCatalogPillar && (
           <button
+            type="button"
             onClick={() => setShowUpload(true)}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-untold-gold text-untold-dark text-sm font-semibold hover:bg-untold-gold-light transition-colors"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-untold-gold text-untold-dark text-sm font-semibold hover:bg-untold-gold-light transition-colors shrink-0"
           >
             <PlusIcon className="w-4 h-4" />
             Upload Video
           </button>
         )}
-      </div>
+      </StudioPageHeader>
+      <PipelineBar activeStep="publishing" />
 
       <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
         {CONTENT_PILLARS.map((p) => (

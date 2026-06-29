@@ -9,6 +9,8 @@ import Footer from './components/layout/Footer';
 import WebRoutes from './routes/WebRoutes';
 import MobileApp from './app/MobileApp';
 import AdminApp from './admin/AdminApp';
+import AIApp from './ai/AIApp';
+import AdminLegacyRedirect from './routes/AdminLegacyRedirect';
 
 export default function App() {
   return (
@@ -16,7 +18,12 @@ export default function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/app/*" element={<MobileApp />} />
-          <Route path="/admin/*" element={<AdminApp />} />
+          {/* UNTOLD STUDIO — internal production OS (team only) */}
+          <Route path="/studio/*" element={<AdminApp />} />
+          {/* Legacy /admin URLs → /studio */}
+          <Route path="/admin/*" element={<AdminLegacyRedirect />} />
+          {/* UNTOLD AI — Phase 2 SaaS (separate product) */}
+          <Route path="/ai/*" element={<AIApp />} />
           <Route
             path="/*"
             element={

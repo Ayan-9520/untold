@@ -150,3 +150,24 @@ class MembershipAdminService:
                 )
             )
         return items, total
+
+    @staticmethod
+    def update_subscription(db: Session, sub_id: int, plan: str | None, status: str | None) -> SubscriptionAdminResponse | None:
+        sub = db.query(Subscription).filter(Subscription.id == sub_id).first()
+        if not sub:
+            return None
+        if plan is not None:
+            sub.plan = SubscriptionPlan(plan)
+        if status is not None:
+            sub.status = SubscriptionStatus(status)
+        db.commit()
+        db.refresh(sub)
+        user = db.query(User).filter(User.id == sub.user_id).first()
+        return SubscriptionAdminResponse(
+            id=sub.id,
+            user_id=sub.user_id,
+            user_email=user.email if user else None,
+            plan=sub.plan.value,
+            status=sub.status.value,
+            started_at=sub.started_at,
+        )

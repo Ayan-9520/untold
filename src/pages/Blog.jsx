@@ -3,35 +3,35 @@ import SEO from '../components/SEO';
 
 const POSTS = [
   {
-    id: 'blog-ai-storytelling',
-    title: 'How AI Is Rewriting Sports Storytelling',
-    excerpt: 'UNTOLD\'s AI agents now handle 85% of localization, news summaries, and live commentary — with human editors approving every publish.',
-    date: '2026-03-15',
+    id: 'blog-multi-sport',
+    title: 'Why UNTOLD Covers Every Arena — Not Just One Sport',
+    excerpt: 'From biopics and rivalries to Olympic stories and boxing legends — how we built a global sports storytelling platform.',
+    date: '2026-03-18',
     category: 'Platform',
-    image: 'https://images.unsplash.com/photo-1504711434969-e33886168f1c?w=800&q=80',
+    image: 'https://images.unsplash.com/photo-1461896836934-ffe607ba7a38?w=800&q=80',
+  },
+  {
+    id: 'blog-biopics',
+    title: 'The Rise of Sports Biopics in 2026',
+    excerpt: 'Jordan, Ali, Senna, Messi — audiences want depth. UNTOLD Originals on the biopic boom across football, F1, and beyond.',
+    date: '2026-03-12',
+    category: 'Originals',
+    image: 'https://images.unsplash.com/photo-1519861531473-9200292dcfe3?w=800&q=80',
   },
   {
     id: 'blog-fan-wars',
-    title: 'Fan Wars: India vs Pakistan Breaks Records',
-    excerpt: 'Over 87,000 votes cast in 48 hours as UNTOLD\'s fan community battles for bragging rights.',
-    date: '2026-03-10',
+    title: 'Fan Wars Go Global: Lakers vs Celtics Breaks Records',
+    excerpt: 'Over 40,000 votes in 24 hours as UNTOLD\'s fan community battles across basketball, football, F1, and cricket.',
+    date: '2026-03-05',
     category: 'Community',
-    image: 'https://images.unsplash.com/photo-1531415074968-076ba3e9f2e4?w=800&q=80',
-  },
-  {
-    id: 'blog-dhoni-doc',
-    title: 'Behind the Scenes: Rise of Dhoni',
-    excerpt: 'Director\'s cut insights from UNTOLD Originals\' most-watched cricket documentary.',
-    date: '2026-03-01',
-    category: 'Originals',
-    image: 'https://images.unsplash.com/photo-1540747913346-19a32ad3b0f2?w=800&q=80',
+    image: 'https://images.unsplash.com/photo-1546519638-68e109498ffc?w=800&q=80',
   },
 ];
 
 export default function Blog() {
   return (
     <>
-      <SEO title="Blog" description="UNTOLD blog — sports media, AI, and fan culture" path="/blog" />
+      <SEO title="Blog" description="UNTOLD blog — global sports storytelling, biopics, and fan culture" path="/blog" />
       <section className="pt-28 pb-16">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mb-10 max-w-2xl">
@@ -40,7 +40,7 @@ export default function Blog() {
               Stories About Stories
             </h1>
             <p className="mt-3 text-sm dark:text-untold-muted light:text-gray-600">
-              Platform updates, behind-the-scenes, and sports media intelligence.
+              Biopics, rivalries, documentaries, and sports media intelligence from every arena.
             </p>
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">

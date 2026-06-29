@@ -1,24 +1,16 @@
 import { useState, useEffect } from 'react';
-import { useTranslation } from 'react-i18next';
 import SEO from '../components/SEO';
 import HeroBanner from '../components/sections/HeroBanner';
-import LiveNow from '../components/sections/LiveNow';
-import Trending from '../components/sections/Trending';
-import BreakingNews from '../components/sections/BreakingNews';
-import CategoryRow from '../components/sections/CategoryRow';
-import RivalriesRow from '../components/sections/RivalriesRow';
-import FanWarsRow from '../components/fan/FanWarsRow';
+import HomeRow from '../components/sections/HomeRow';
 import MembershipCTA from '../components/sections/MembershipCTA';
-import PlatformFeatures from '../components/sections/PlatformFeatures';
 import { heroContent } from '../data/heroSlides';
+import { HOME_FEATURED_ROWS } from '../data/homeRows';
 import { contentApi } from '../api/content';
 
 /**
- * UNTOLD Premium OTT Homepage
- * Hero → Live → Trending Originals → Shorts → Breaking News → Pillars → Fan Wars → Membership
+ * UNTOLD ORIGINALS — Netflix-style premium OTT homepage
  */
 export default function Home() {
-  const { t } = useTranslation();
   const [hero, setHero] = useState(heroContent);
 
   useEffect(() => {
@@ -28,43 +20,17 @@ export default function Home() {
   return (
     <>
       <SEO
-        title="Home"
-        description="UNTOLD — The Story Behind The Glory. Premium global sports storytelling — documentaries, live scores, and fan community."
+        title="UNTOLD ORIGINALS"
+        description="UNTOLD ORIGINALS — The Story Behind The Glory. Premium global documentary streaming: biopics, true stories, sports legends, business, Hollywood, Bollywood, science, and history."
         path="/"
       />
       <HeroBanner content={hero} />
-      <LiveNow />
-      <Trending />
-      <CategoryRow
-        category="shorts"
-        title={t('home.shorts')}
-        subtitle={t('home.shortsSubtitle')}
-        viewAllLink="/shorts"
-        variant="short"
-      />
-      <BreakingNews />
-      <CategoryRow
-        category="legends"
-        title={t('home.legends')}
-        subtitle={t('home.legendsSubtitle')}
-        viewAllLink="/legends"
-      />
-      <RivalriesRow />
-      <CategoryRow
-        category="stories"
-        title={t('home.stories')}
-        subtitle={t('home.storiesSubtitle')}
-        viewAllLink="/stories"
-      />
-      <CategoryRow
-        category="secrets"
-        title={t('home.secrets')}
-        subtitle={t('home.secretsSubtitle')}
-        viewAllLink="/secrets"
-      />
-      <FanWarsRow />
+      <div className="ott-home-rows relative z-10 -mt-4 md:-mt-8">
+        {HOME_FEATURED_ROWS.map((row) => (
+          <HomeRow key={`${row.type}-${row.vertical || row.category || row.title}`} row={row} />
+        ))}
+      </div>
       <MembershipCTA />
-      <PlatformFeatures />
     </>
   );
 }

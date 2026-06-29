@@ -32,7 +32,7 @@ export const newsCatalog = [
   article('news-4', 'Wimbledon Draw: Alcaraz Faces Tough Path', 'Defending champion lands in same half as rising stars.', 'Tennis', '2026-06-24T09:00:00Z'),
   article('news-5', 'ICC World Cup 2026: Host Cities Announced', 'Ten venues across India confirmed for cricket\'s biggest carnival.', 'Cricket', '2026-06-23T11:00:00Z', { trending: true }),
   article('news-6', 'Hamilton Targets Home Glory at Silverstone', 'Seven-time champion eyes first British GP win with new team.', 'Formula 1', '2026-06-22T16:00:00Z'),
-  article('news-7', 'FIFA 2026: Group Stage Format Explained', '48 teams, new structure — everything fans need to know.', 'Football', '2026-06-21T10:00:00Z'),
+  article('news-7', 'World Cup 2026: Group Stage Format Explained', '48 teams, new structure — everything fans need to know about football\'s biggest tournament.', 'Football', '2026-06-21T10:00:00Z'),
   article('news-8', 'IPL 2027 Auction Date Confirmed', 'Franchises prepare retention lists ahead of mega auction in Dubai.', 'Cricket', '2026-06-20T08:00:00Z'),
   article('news-9', 'Olympics LA 2028: India\'s Medal Prospects', 'Shooting, wrestling, and hockey lead medal hopes for the contingent.', 'Olympics', '2026-06-19T14:00:00Z'),
   article('news-10', 'El Clásico Preview: New Era, Same Rivalry', 'Barcelona and Real Madrid clash with title implications on the line.', 'Football', '2026-06-18T12:00:00Z'),

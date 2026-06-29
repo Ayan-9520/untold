@@ -1,5 +1,6 @@
 import { Navigate } from 'react-router-dom';
 import { useAdminAuth } from '../context/AdminAuthContext';
+import { PRODUCTS } from '../../config/ecosystem';
 
 export default function ProtectedRoute({ children }) {
   const { isAuthenticated, isAdmin, loading } = useAdminAuth();
@@ -13,7 +14,7 @@ export default function ProtectedRoute({ children }) {
   }
 
   if (!isAuthenticated || !isAdmin) {
-    return <Navigate to="/admin/login" replace />;
+    return <Navigate to={PRODUCTS.STUDIO.loginPath} replace />;
   }
 
   return children;

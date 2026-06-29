@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import DataTable from '../components/DataTable';
 import SearchFilter from '../components/SearchFilter';
+import AdminErrorBanner from '../components/AdminErrorBanner';
 import { users as usersApi } from '../api/adminApi';
 import { DownloadIcon } from '../components/AdminIcons';
 
@@ -8,16 +9,19 @@ export default function UsersPage() {
   const [users, setUsers] = useState([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
 
   const fetchUsers = () => {
     setLoading(true);
+    setError(null);
     usersApi.list({ page, page_size: 20 })
       .then((data) => {
         setUsers(data.items);
         setTotal(data.total);
       })
+      .catch((err) => setError(err.message || 'Failed to load users'))
       .finally(() => setLoading(false));
   };
 
@@ -121,6 +125,8 @@ export default function UsersPage() {
           Export Report
         </button>
       </div>
+
+      {error && <AdminErrorBanner message={error} onRetry={fetchUsers} />}
 
       <SearchFilter value={search} onChange={setSearch} placeholder="Search users..." />
 

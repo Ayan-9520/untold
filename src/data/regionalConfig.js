@@ -11,8 +11,8 @@ export const REGIONS = [
     currencySymbol: '₹',
     defaultLanguage: 'hi',
     sports: ['Cricket', 'Kabaddi', 'Football'],
-    featuredVideoIds: ['orig-dhoni', 'leg-kohli', 'leg-sachin', 'riv-ind-pak', 'orig-1983', 'short-six'],
-    featuredEventIds: ['evt-icc-cwc', 'evt-ind-pak', 'evt-ind-eng-test'],
+    featuredVideoIds: ['orig-messi-ronaldo', 'leg-jordan', 'orig-senna', 'riv-fed-nadal', 'story-historic', 'leg-ali'],
+    featuredEventIds: ['evt-wimbledon', 'evt-ind-eng-test', 'evt-ucl-knockout'],
     paymentMethods: ['UPI', 'Razorpay'],
   },
   {
@@ -48,7 +48,7 @@ export const REGIONS = [
     defaultLanguage: 'ru',
     sports: ['Football', 'MMA', 'Hockey'],
     featuredVideoIds: ['short-knockouts', 'leg-tyson', 'riv-messi-ronaldo', 'story-comeback'],
-    featuredEventIds: ['evt-ufc-305', 'evt-fifa-wc'],
+    featuredEventIds: ['evt-ufc-305', 'evt-world-cup-2026'],
     paymentMethods: ['Stripe'],
   },
   {
@@ -60,7 +60,7 @@ export const REGIONS = [
     defaultLanguage: 'es',
     sports: ['Football', 'Boxing'],
     featuredVideoIds: ['leg-maradona', 'leg-messi', 'leg-pele', 'riv-messi-ronaldo', 'short-goals'],
-    featuredEventIds: ['evt-fifa-wc', 'evt-el-clasico'],
+    featuredEventIds: ['evt-world-cup-2026', 'evt-el-clasico'],
     paymentMethods: ['Stripe', 'PayPal'],
   },
   {
@@ -72,7 +72,7 @@ export const REGIONS = [
     defaultLanguage: 'ar',
     sports: ['Football', 'Boxing', 'MMA'],
     featuredVideoIds: ['riv-messi-ronaldo', 'short-knockouts', 'leg-ronaldo', 'sec-transfer'],
-    featuredEventIds: ['evt-boxing-title', 'evt-ufc-305', 'evt-fifa-wc'],
+    featuredEventIds: ['evt-boxing-title', 'evt-ufc-305', 'evt-world-cup-2026'],
     paymentMethods: ['Stripe', 'PayPal'],
   },
   {

@@ -12,6 +12,7 @@ from app.schemas.ai_pipeline import (
     LocalizationJobResponse,
     MembershipStatsResponse,
     SubscriptionAdminResponse,
+    SubscriptionAdminUpdate,
 )
 from app.schemas.common import PaginatedResponse
 from app.services.ai_pipeline_service import AIPipelineService, MembershipAdminService
@@ -85,3 +86,16 @@ def list_subscriptions(
         page_size=page_size,
         pages=math.ceil(total / page_size) if total else 0,
     )
+
+
+@router.patch("/membership/subscriptions/{sub_id}", response_model=SubscriptionAdminResponse)
+def update_subscription(
+    sub_id: int,
+    data: SubscriptionAdminUpdate,
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_admin),
+):
+    updated = MembershipAdminService.update_subscription(db, sub_id, data.plan, data.status)
+    if not updated:
+        raise HTTPException(status_code=404, detail="Subscription not found")
+    return updated

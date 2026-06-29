@@ -108,7 +108,7 @@ export const signatureSeries = [
     id: 'series-goat-debates',
     title: 'UNTOLD GOAT Debates',
     schedule: 'Signature Series',
-    description: 'Messi vs Ronaldo, Sachin vs Lara — the debates that never end.',
+    description: 'Messi vs Ronaldo, Jordan vs LeBron, Senna, Ali — the debates and biopics that span every sport.',
     slug: 'originals',
     path: '/originals',
     accent: 'Originals',

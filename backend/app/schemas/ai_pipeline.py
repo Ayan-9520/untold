@@ -75,3 +75,8 @@ class SubscriptionAdminResponse(BaseModel):
     started_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class SubscriptionAdminUpdate(BaseModel):
+    plan: str | None = None
+    status: str | None = None

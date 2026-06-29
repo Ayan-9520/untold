@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
@@ -11,24 +11,10 @@ import RegionSelector from '../ui/RegionSelector';
 import LanguageSelector from '../ui/LanguageSelector';
 import MenuSearchField from '../ui/MenuSearchField';
 import { CloseIcon, MenuIcon } from '../icons';
+import { PRIMARY_NAV, MORE_NAV } from '../../data/siteNav';
 
-const primaryNav = [
-  { to: '/', key: 'home' },
-  { to: '/originals', key: 'originals' },
-  { to: '/shorts', key: 'shorts' },
-  { to: '/legends', key: 'legends' },
-  { to: '/rivalries', key: 'rivalries' },
-  { to: '/stories', key: 'stories' },
-  { to: '/secrets', key: 'secrets' },
-  { to: '/news', key: 'news' },
-  { to: '/live', key: 'live', live: true },
-  { to: '/community', key: 'community' },
-];
-
-const moreNav = [
-  { to: '/events', key: 'events' },
-  { to: '/explore', key: 'explore' },
-];
+const primaryNav = PRIMARY_NAV;
+const moreNav = MORE_NAV;
 
 function MobileMenu({ open, onClose, t, isAuthenticated, user, logout }) {
   const { isDark } = useTheme();
@@ -138,7 +124,9 @@ export default function Navbar() {
   const { t } = useTranslation();
   const { isAuthenticated, user, logout } = useWebAuth();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const moreRef = useRef(null);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 24);
@@ -156,14 +144,24 @@ export default function Navbar() {
     return () => window.removeEventListener('resize', onResize);
   }, [menuOpen]);
 
+  useEffect(() => {
+    if (!moreOpen) return;
+    const onClick = (e) => {
+      if (moreRef.current && !moreRef.current.contains(e.target)) setMoreOpen(false);
+    };
+    document.addEventListener('click', onClick);
+    return () => document.removeEventListener('click', onClick);
+  }, [moreOpen]);
+
   const headerClass = scrolled ? 'site-header site-header--solid' : 'site-header site-header--transparent';
 
   return (
     <>
       <header className={headerClass}>
         <div className="site-header-inner">
-          <Link to="/" className="site-header-logo">
+          <Link to="/" className="site-header-logo site-header-brand">
             <Logo variant="compact" />
+            <span className="site-header-brand-text">ORIGINALS</span>
           </Link>
 
           <nav className="site-header-nav hidden md:flex" aria-label="Main">
@@ -179,6 +177,32 @@ export default function Navbar() {
                 {live && <span className="site-header-live-dot" aria-hidden="true" />}
               </NavLink>
             ))}
+            <div className="relative" ref={moreRef}>
+              <button
+                type="button"
+                className={`site-header-link site-header-link--more${moreOpen ? ' site-header-link--active' : ''}`}
+                onClick={() => setMoreOpen((o) => !o)}
+                aria-expanded={moreOpen}
+              >
+                {t('nav.more', 'More')}
+              </button>
+              {moreOpen && (
+                <div className="site-header-more-menu">
+                  {moreNav.map(({ to, key }) => (
+                    <NavLink
+                      key={to}
+                      to={to}
+                      onClick={() => setMoreOpen(false)}
+                      className={({ isActive }) =>
+                        `site-header-more-link${isActive ? ' site-header-more-link--active' : ''}`
+                      }
+                    >
+                      {t(`nav.${key}`)}
+                    </NavLink>
+                  ))}
+                </div>
+              )}
+            </div>
           </nav>
 
           <div className="site-header-actions">

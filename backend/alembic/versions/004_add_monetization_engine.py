@@ -4,6 +4,7 @@ from typing import Sequence, Union
 
 import sqlalchemy as sa
 from alembic import op
+from sqlalchemy.dialects import postgresql
 
 revision: str = "004_add_monetization_engine"
 down_revision: Union[str, None] = "003_add_live_engine"
@@ -11,23 +12,24 @@ branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
 
-def upgrade() -> None:
-    paymentprovider = sa.Enum("stripe", "razorpay", "manual", name="paymentprovider")
-    paymentstatus = sa.Enum("pending", "completed", "failed", "refunded", name="paymentstatus")
-    invoicestatus = sa.Enum("draft", "paid", "void", name="invoicestatus")
-    accesstier = sa.Enum("free", "premium", "vip", name="accesstier")
+def _pg_enum(name: str, *values: str) -> postgresql.ENUM:
+    enum_type = postgresql.ENUM(*values, name=name)
+    enum_type.create(op.get_bind(), checkfirst=True)
+    return postgresql.ENUM(*values, name=name, create_type=False)
 
-    paymentprovider.create(op.get_bind(), checkfirst=True)
-    paymentstatus.create(op.get_bind(), checkfirst=True)
-    invoicestatus.create(op.get_bind(), checkfirst=True)
-    accesstier.create(op.get_bind(), checkfirst=True)
+
+def upgrade() -> None:
+    paymentprovider = _pg_enum("paymentprovider", "stripe", "razorpay", "manual")
+    paymentstatus = _pg_enum("paymentstatus", "pending", "completed", "failed", "refunded")
+    invoicestatus = _pg_enum("invoicestatus", "draft", "paid", "void")
+    accesstier = _pg_enum("accesstier", "free", "premium", "vip")
 
     op.create_table(
         "subscription_plans",
         sa.Column("id", sa.Integer(), nullable=False),
         sa.Column("slug", sa.String(length=50), nullable=False),
         sa.Column("name", sa.String(length=100), nullable=False),
-        sa.Column("tier", sa.Enum("free", "premium", "vip", name="subscriptionplan", create_type=False), nullable=False),
+        sa.Column("tier", postgresql.ENUM("free", "premium", "vip", name="subscriptionplan", create_type=False), nullable=False),
         sa.Column("description", sa.Text(), nullable=True),
         sa.Column("prices_json", sa.Text(), nullable=False),
         sa.Column("features_json", sa.Text(), nullable=True),

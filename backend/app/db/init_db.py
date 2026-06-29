@@ -50,6 +50,9 @@ def seed_database() -> None:
 
         seed_monetization_data(db)
         logger.info("News, live & monetization seed data applied")
+        from app.db.seed_studio import seed_studio_data
+
+        seed_studio_data(db)
     finally:
         db.close()
 

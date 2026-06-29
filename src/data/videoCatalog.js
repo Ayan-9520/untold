@@ -1,8 +1,10 @@
 /**
- * Curated UNTOLD catalog — realistic sports content per category (API-ready)
+ * Curated UNTOLD catalog — global sports storytelling (API-ready)
  */
 import { originalsCatalog } from './originalsCatalog';
+import { verticalCatalog } from './verticalCatalog';
 import { getSampleVideoUrl } from './sampleVideos';
+import { sportImage } from './sportsImages';
 
 export const CATEGORIES = [
   { slug: 'originals', name: 'Originals', description: 'Premium flagship documentaries & sports films' },
@@ -14,17 +16,17 @@ export const CATEGORIES = [
 ];
 
 const IMG = {
-  Cricket: 'https://images.unsplash.com/photo-1531415074968-076ba3e9f2e4?w=800&q=80',
-  Football: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=800&q=80',
-  Basketball: 'https://images.unsplash.com/photo-1546519638-68e109498ffc?w=800&q=80',
-  Tennis: 'https://images.unsplash.com/photo-1554068865-24cecd4e24b8?w=800&q=80',
-  Boxing: 'https://images.unsplash.com/photo-1549719386-74dfcbf7dbed?w=800&q=80',
-  MMA: 'https://images.unsplash.com/photo-1555597673-b21d5c48148c?w=800&q=80',
-  'Formula 1': 'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=800&q=80',
-  Olympics: 'https://images.unsplash.com/photo-1461896836934-ffe607ba7a38?w=800&q=80',
-  Kabaddi: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=800&q=80',
-  Wrestling: 'https://images.unsplash.com/photo-1549719386-74dfcbf7dbed?w=800&q=80',
-  Hockey: 'https://images.unsplash.com/photo-1515703407324-5f753afd8be8?w=800&q=80',
+  get Cricket() { return sportImage('Cricket'); },
+  get Football() { return sportImage('Football'); },
+  get Basketball() { return sportImage('Basketball'); },
+  get Tennis() { return sportImage('Tennis'); },
+  get Boxing() { return sportImage('Boxing'); },
+  get MMA() { return sportImage('MMA'); },
+  get 'Formula 1'() { return sportImage('Formula 1'); },
+  get Olympics() { return sportImage('Olympics'); },
+  get Kabaddi() { return sportImage('Kabaddi'); },
+  get Wrestling() { return sportImage('Wrestling'); },
+  get Hockey() { return sportImage('Hockey'); },
 };
 
 function entry(id, title, description, category, sport, duration, year, rating, opts = {}) {
@@ -38,6 +40,7 @@ function entry(id, title, description, category, sport, duration, year, rating, 
     category,
     categoryName: cat?.name || category,
     sport,
+    pillar: opts.pillar || cat?.name || category,
     format: opts.format || (category === 'shorts' ? 'Short' : 'Documentary'),
     duration,
     year,
@@ -54,9 +57,9 @@ function entry(id, title, description, category, sport, duration, year, rating, 
 }
 
 const CURATED = [
-  entry('orig-revolution', 'UNTOLD: The Revolution', 'The movement that reshaped modern sport.', 'originals', 'Football', '1h 32m', 2024, 'TV-MA', { featured: true, trending: true }),
-  entry('orig-dhoni', 'UNTOLD: Rise of Dhoni', 'From Ranchi to World Cup glory.', 'originals', 'Cricket', '1h 28m', 2024, 'TV-PG', { trending: true }),
-  entry('orig-messi-ronaldo', 'UNTOLD: Messi vs Ronaldo', 'A rivalry that divided football.', 'originals', 'Football', '1h 35m', 2023, 'TV-PG', { trending: true }),
+  entry('orig-revolution', 'UNTOLD: The Revolution', 'The movement that reshaped modern sport.', 'originals', 'Football', '1h 32m', 2024, 'TV-MA', { trending: true, format: 'Documentary', pillar: 'Stories' }),
+  entry('orig-dhoni', 'UNTOLD: Rise of Dhoni', 'From Ranchi to World Cup glory.', 'originals', 'Cricket', '1h 28m', 2024, 'TV-PG', { format: 'Biopic', pillar: 'Legends' }),
+  entry('orig-messi-ronaldo', 'UNTOLD: Messi vs Ronaldo', 'A rivalry that divided football.', 'originals', 'Football', '1h 35m', 2023, 'TV-PG', { featured: true, trending: true, format: 'Documentary', pillar: 'Rivalries' }),
   entry('orig-last-dance', 'UNTOLD: The Last Dance', 'Inside the Bulls dynasty.', 'originals', 'Basketball', '1h 45m', 2020, 'TV-MA'),
   entry('orig-1983', 'UNTOLD: 1983 World Cup', "India's impossible triumph.", 'originals', 'Cricket', '1h 30m', 2023, 'TV-PG'),
   entry('orig-senna', 'UNTOLD: Senna Legacy', 'Speed, faith, and immortality.', 'originals', 'Formula 1', '1h 46m', 2022, 'TV-MA'),
@@ -133,7 +136,7 @@ const fromOriginals = originalsCatalog.map(mapOriginal);
 const seen = new Set();
 const merged = [];
 
-for (const v of [...CURATED, ...fromOriginals]) {
+for (const v of [...CURATED, ...fromOriginals, ...verticalCatalog]) {
   if (!seen.has(v.id)) {
     seen.add(v.id);
     merged.push(v);
@@ -154,8 +157,15 @@ export function searchVideos(query) {
       v.title.toLowerCase().includes(q) ||
       v.description?.toLowerCase().includes(q) ||
       v.sport?.toLowerCase().includes(q) ||
-      v.categoryName?.toLowerCase().includes(q)
+      v.vertical?.toLowerCase().includes(q) ||
+      v.categoryName?.toLowerCase().includes(q) ||
+      v.format?.toLowerCase().includes(q) ||
+      (v.genres && v.genres.some((g) => g.toLowerCase().includes(q)))
   );
+}
+
+export function getByVertical(verticalId, limit = 12) {
+  return videoCatalog.filter((v) => v.vertical === verticalId).slice(0, limit);
 }
 
 export function getByCategory(categorySlug) {

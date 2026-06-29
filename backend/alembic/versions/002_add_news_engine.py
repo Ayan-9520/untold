@@ -4,6 +4,7 @@ from typing import Sequence, Union
 
 import sqlalchemy as sa
 from alembic import op
+from sqlalchemy.dialects import postgresql
 
 revision: str = "002_add_news_engine"
 down_revision: Union[str, None] = "001_initial_schema"
@@ -11,14 +12,16 @@ branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
 
-def upgrade() -> None:
-    newstype = sa.Enum("breaking", "match_update", "feature", "exclusive", name="newstype")
-    newsstatus = sa.Enum("draft", "pending_review", "published", "archived", name="newsstatus")
-    newssourcetype = sa.Enum("rss", "sportmonks", "sportradar", "cricapi", "manual", name="newssourcetype")
+def _pg_enum(name: str, *values: str) -> postgresql.ENUM:
+    enum_type = postgresql.ENUM(*values, name=name)
+    enum_type.create(op.get_bind(), checkfirst=True)
+    return postgresql.ENUM(*values, name=name, create_type=False)
 
-    newstype.create(op.get_bind(), checkfirst=True)
-    newsstatus.create(op.get_bind(), checkfirst=True)
-    newssourcetype.create(op.get_bind(), checkfirst=True)
+
+def upgrade() -> None:
+    newstype = _pg_enum("newstype", "breaking", "match_update", "feature", "exclusive")
+    newsstatus = _pg_enum("newsstatus", "draft", "pending_review", "published", "archived")
+    newssourcetype = _pg_enum("newssourcetype", "rss", "sportmonks", "sportradar", "cricapi", "manual")
 
     op.create_table(
         "news_categories",

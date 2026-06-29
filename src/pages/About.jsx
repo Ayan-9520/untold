@@ -46,8 +46,8 @@ export default function About() {
             <span className="text-gold-gradient">Worth Telling</span>
           </h1>
           <p className="mt-6 mx-auto max-w-2xl text-lg dark:text-untold-muted light:text-gray-600 leading-relaxed animate-slide-up stagger-1">
-            UNTOLD is a premium documentary platform dedicated to revealing the hidden narratives
-            behind sports' most iconic moments, legendary athletes, and fierce rivalries.
+            UNTOLD is a premium storytelling platform for every arena — biopics, documentaries, rivalries,
+            and untold stories from football pitches to F1 paddocks, boxing rings to Olympic stadiums.
           </p>
         </div>
       </section>

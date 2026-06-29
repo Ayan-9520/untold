@@ -4,6 +4,7 @@ from typing import Sequence, Union
 
 import sqlalchemy as sa
 from alembic import op
+from sqlalchemy.dialects import postgresql
 
 revision: str = "001_initial_schema"
 down_revision: Union[str, None] = None
@@ -11,12 +12,20 @@ branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
 
+def _pg_enum(name: str, *values: str) -> postgresql.ENUM:
+    """Create PostgreSQL enum once, then reuse with create_type=False in columns."""
+    enum_type = postgresql.ENUM(*values, name=name)
+    enum_type.create(op.get_bind(), checkfirst=True)
+    return postgresql.ENUM(*values, name=name, create_type=False)
+
+
 def upgrade() -> None:
-    userrole = sa.Enum("user", "admin", name="userrole")
-    subscriptionplan = sa.Enum("free", "premium", "vip", name="subscriptionplan")
-    subscriptionstatus = sa.Enum("active", "cancelled", "expired", name="subscriptionstatus")
-    videotype = sa.Enum("documentary", "short", "series", name="videotype")
-    analyticseventtype = sa.Enum(
+    userrole = _pg_enum("userrole", "user", "admin")
+    subscriptionplan = _pg_enum("subscriptionplan", "free", "premium", "vip")
+    subscriptionstatus = _pg_enum("subscriptionstatus", "active", "cancelled", "expired")
+    videotype = _pg_enum("videotype", "documentary", "short", "series")
+    analyticseventtype = _pg_enum(
+        "analyticseventtype",
         "view",
         "play",
         "search",
@@ -24,22 +33,14 @@ def upgrade() -> None:
         "watchlist_remove",
         "login",
         "register",
-        name="analyticseventtype",
     )
-    localizationstatus = sa.Enum(
+    localizationstatus = _pg_enum(
+        "localizationstatus",
         "pending",
         "processing",
         "completed",
         "failed",
-        name="localizationstatus",
     )
-
-    userrole.create(op.get_bind(), checkfirst=True)
-    subscriptionplan.create(op.get_bind(), checkfirst=True)
-    subscriptionstatus.create(op.get_bind(), checkfirst=True)
-    videotype.create(op.get_bind(), checkfirst=True)
-    analyticseventtype.create(op.get_bind(), checkfirst=True)
-    localizationstatus.create(op.get_bind(), checkfirst=True)
 
     op.create_table(
         "users",

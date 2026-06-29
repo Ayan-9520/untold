@@ -4,6 +4,7 @@ import { useAdminAuth } from '../context/AdminAuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { SunIcon, MoonIcon } from '../../components/icons';
 import Logo from '../../components/brand/Logo';
+import { PRODUCTS, studioPath } from '../../config/ecosystem';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -15,7 +16,7 @@ export default function LoginPage() {
   const navigate = useNavigate();
 
   if (!authLoading && isAuthenticated && isAdmin) {
-    return <Navigate to="/admin" replace />;
+    return <Navigate to={studioPath()} replace />;
   }
 
   const handleSubmit = async (e) => {
@@ -24,7 +25,7 @@ export default function LoginPage() {
     setError('');
     try {
       await login(email, password);
-      navigate('/admin');
+      navigate(studioPath());
     } catch (err) {
       const detail = err.response?.data?.detail;
       setError(typeof detail === 'string' ? detail : Array.isArray(detail) ? detail[0]?.msg : err.message || 'Login failed');
@@ -44,7 +45,11 @@ export default function LoginPage() {
         <div className="absolute inset-0 bg-gradient-to-br from-untold-gold/20 via-transparent to-untold-dark" />
         <div className="relative text-center flex flex-col items-center">
           <Logo variant="full" className="mx-auto !max-w-[260px]" />
-          <p className="mt-6 text-lg dark:text-untold-muted light:text-gray-500">Admin Console</p>
+          <p className="mt-6 text-lg font-semibold text-untold-gold">{PRODUCTS.STUDIO.name}</p>
+          <p className="mt-2 text-sm dark:text-untold-muted light:text-gray-500">{PRODUCTS.STUDIO.tagline}</p>
+          <p className="mt-3 text-xs dark:text-untold-muted/80 light:text-gray-400 max-w-xs">
+            Internal production OS — not shown on {PRODUCTS.ORIGINALS.name}
+          </p>
         </div>
       </div>
 
@@ -58,7 +63,7 @@ export default function LoginPage() {
         <div className="max-w-md w-full mx-auto">
           <h2 className="text-2xl font-bold dark:text-untold-white light:text-black">Welcome back</h2>
           <p className="mt-1 text-sm dark:text-untold-muted light:text-gray-500">
-            Sign in with your admin credentials
+            Sign in with your team credentials
           </p>
 
           <form onSubmit={handleSubmit} className="mt-8 space-y-4">

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Request, status
+from fastapi import APIRouter, Depends, Request, Response, status
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
@@ -21,21 +21,21 @@ settings = get_settings()
 
 @router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 @limiter.limit(settings.rate_limit_auth)
-def register(request: Request, data: RegisterRequest, db: Session = Depends(get_db)):
+def register(request: Request, response: Response, data: RegisterRequest, db: Session = Depends(get_db)):
     user = AuthService.register(db, data)
     return user
 
 
 @router.post("/login", response_model=TokenResponse)
 @limiter.limit(settings.rate_limit_auth)
-def login(request: Request, data: LoginRequest, db: Session = Depends(get_db)):
+def login(request: Request, response: Response, data: LoginRequest, db: Session = Depends(get_db)):
     _, tokens = AuthService.login(db, data)
     return tokens
 
 
 @router.post("/refresh", response_model=TokenResponse)
 @limiter.limit(settings.rate_limit_auth)
-def refresh_token(request: Request, data: RefreshTokenRequest, db: Session = Depends(get_db)):
+def refresh_token(request: Request, response: Response, data: RefreshTokenRequest, db: Session = Depends(get_db)):
     return AuthService.refresh_access_token(db, data.refresh_token)
 
 

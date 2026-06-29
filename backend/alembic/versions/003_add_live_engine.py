@@ -4,6 +4,7 @@ from typing import Sequence, Union
 
 import sqlalchemy as sa
 from alembic import op
+from sqlalchemy.dialects import postgresql
 
 revision: str = "003_add_live_engine"
 down_revision: Union[str, None] = "002_add_news_engine"
@@ -11,19 +12,20 @@ branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
 
-def upgrade() -> None:
-    livesport = sa.Enum("Cricket", "Football", "Tennis", "Formula 1", name="livesport")
-    matchstatus = sa.Enum("upcoming", "live", "halftime", "completed", "postponed", name="matchstatus")
-    liveprovider = sa.Enum("sportmonks", "sportradar", "cricapi", "manual", name="liveprovider")
-    liveeventtype = sa.Enum(
-        "goal", "wicket", "boundary", "six", "point", "lap", "incident", "card", "substitution", "default",
-        name="liveeventtype",
-    )
+def _pg_enum(name: str, *values: str) -> postgresql.ENUM:
+    enum_type = postgresql.ENUM(*values, name=name)
+    enum_type.create(op.get_bind(), checkfirst=True)
+    return postgresql.ENUM(*values, name=name, create_type=False)
 
-    livesport.create(op.get_bind(), checkfirst=True)
-    matchstatus.create(op.get_bind(), checkfirst=True)
-    liveprovider.create(op.get_bind(), checkfirst=True)
-    liveeventtype.create(op.get_bind(), checkfirst=True)
+
+def upgrade() -> None:
+    livesport = _pg_enum("livesport", "Cricket", "Football", "Tennis", "Formula 1")
+    matchstatus = _pg_enum("matchstatus", "upcoming", "live", "halftime", "completed", "postponed")
+    liveprovider = _pg_enum("liveprovider", "sportmonks", "sportradar", "cricapi", "manual")
+    liveeventtype = _pg_enum(
+        "liveeventtype",
+        "goal", "wicket", "boundary", "six", "point", "lap", "incident", "card", "substitution", "default",
+    )
 
     op.create_table(
         "live_matches",

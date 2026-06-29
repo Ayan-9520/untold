@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request, status
@@ -26,9 +27,10 @@ logger = logging.getLogger("untold")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Starting %s v%s [%s]", settings.app_name, settings.app_version, settings.environment)
-    run_migrations()
-    seed_database()
-    setup_rate_limiting(app, settings)
+    # Docker entrypoint runs migrations + seed when RUN_MIGRATIONS=true
+    if os.getenv("RUN_MIGRATIONS") != "true":
+        run_migrations()
+        seed_database()
     ws_task = None
     if settings.enable_websocket:
         ws_task = asyncio.create_task(redis_live_listener())
@@ -54,6 +56,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+setup_rate_limiting(app, settings)
 
 
 @app.exception_handler(AppException)

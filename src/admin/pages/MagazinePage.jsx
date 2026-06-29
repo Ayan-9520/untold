@@ -21,6 +21,7 @@ const STATUS_COLORS = {
 
 export default function MagazinePage() {
   const [jobs, setJobs] = useState([]);
+  const [usingMock, setUsingMock] = useState(false);
   const [theme, setTheme] = useState('IPL Special');
   const [quarter, setQuarter] = useState('Q2');
   const [year, setYear] = useState(2026);
@@ -31,8 +32,12 @@ export default function MagazinePage() {
   useEffect(() => {
     import('../api/adminApi').then((m) => {
       m.magazine?.listJobs?.()
-        .then((data) => setJobs(data.items?.length ? data.items : MOCK_WORKFLOW_JOBS))
-        .catch(() => setJobs(MOCK_WORKFLOW_JOBS));
+        .then((data) => {
+          const items = data.items?.length ? data.items : MOCK_WORKFLOW_JOBS;
+          setJobs(items);
+          setUsingMock(!data.items?.length);
+        })
+        .catch(() => { setJobs(MOCK_WORKFLOW_JOBS); setUsingMock(true); });
     });
   }, []);
 
@@ -85,6 +90,12 @@ export default function MagazinePage() {
           UNTOLD E-Magazine — Data → Editorial → Design → Publish (85–90% automated)
         </p>
       </div>
+
+      {usingMock && (
+        <p className="text-xs px-3 py-2 rounded-lg bg-amber-500/10 text-amber-300 border border-amber-500/20">
+          Showing demo magazine workflow — connect backend for live editorial jobs.
+        </p>
+      )}
 
       <div className="grid sm:grid-cols-3 gap-4">
         <StatCard title="Published Issues" value={issues.length} icon={FilmIcon} accent="gold" />

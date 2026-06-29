@@ -6,7 +6,6 @@ import enum
 from sqlalchemy import (
     Boolean,
     DateTime,
-    Enum,
     ForeignKey,
     Integer,
     String,
@@ -16,7 +15,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.db.base import Base
+from app.db.base import Base, StrEnum
 
 
 class LiveSport(str, enum.Enum):
@@ -60,16 +59,16 @@ class LiveMatch(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     external_id: Mapped[str | None] = mapped_column(String(200), nullable=True, index=True)
-    provider: Mapped[LiveProvider] = mapped_column(Enum(LiveProvider), default=LiveProvider.MANUAL, nullable=False)
+    provider: Mapped[LiveProvider] = mapped_column(StrEnum(LiveProvider), default=LiveProvider.MANUAL, nullable=False)
     slug: Mapped[str] = mapped_column(String(200), unique=True, index=True, nullable=False)
     event_name: Mapped[str] = mapped_column(String(500), nullable=False)
-    sport: Mapped[LiveSport] = mapped_column(Enum(LiveSport), nullable=False, index=True)
+    sport: Mapped[LiveSport] = mapped_column(StrEnum(LiveSport), nullable=False, index=True)
     team_home: Mapped[str] = mapped_column(String(200), nullable=False)
     team_away: Mapped[str | None] = mapped_column(String(200), nullable=True)
     score_home: Mapped[str | None] = mapped_column(String(50), nullable=True)
     score_away: Mapped[str | None] = mapped_column(String(50), nullable=True)
     score_display: Mapped[str | None] = mapped_column(String(100), nullable=True)
-    status: Mapped[MatchStatus] = mapped_column(Enum(MatchStatus), default=MatchStatus.LIVE, nullable=False, index=True)
+    status: Mapped[MatchStatus] = mapped_column(StrEnum(MatchStatus), default=MatchStatus.LIVE, nullable=False, index=True)
     timer: Mapped[str | None] = mapped_column(String(50), nullable=True)
     thumbnail_url: Mapped[str | None] = mapped_column(String(1000), nullable=True)
     location: Mapped[str | None] = mapped_column(String(300), nullable=True)
@@ -95,7 +94,7 @@ class LiveEvent(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     match_id: Mapped[int] = mapped_column(ForeignKey("live_matches.id", ondelete="CASCADE"), index=True, nullable=False)
-    event_type: Mapped[LiveEventType] = mapped_column(Enum(LiveEventType), default=LiveEventType.DEFAULT, nullable=False)
+    event_type: Mapped[LiveEventType] = mapped_column(StrEnum(LiveEventType), default=LiveEventType.DEFAULT, nullable=False)
     minute_or_over: Mapped[str | None] = mapped_column(String(30), nullable=True)
     raw_text: Mapped[str] = mapped_column(Text, nullable=False)
     payload_json: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -142,14 +141,14 @@ class Fixture(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     external_id: Mapped[str] = mapped_column(String(200), nullable=False, index=True)
-    provider: Mapped[LiveProvider] = mapped_column(Enum(LiveProvider), nullable=False)
-    sport: Mapped[LiveSport] = mapped_column(Enum(LiveSport), nullable=False, index=True)
+    provider: Mapped[LiveProvider] = mapped_column(StrEnum(LiveProvider), nullable=False)
+    sport: Mapped[LiveSport] = mapped_column(StrEnum(LiveSport), nullable=False, index=True)
     event_name: Mapped[str] = mapped_column(String(500), nullable=False)
     team_home: Mapped[str] = mapped_column(String(200), nullable=False)
     team_away: Mapped[str | None] = mapped_column(String(200), nullable=True)
     scheduled_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
     venue: Mapped[str | None] = mapped_column(String(300), nullable=True)
-    status: Mapped[MatchStatus] = mapped_column(Enum(MatchStatus), default=MatchStatus.UPCOMING, nullable=False)
+    status: Mapped[MatchStatus] = mapped_column(StrEnum(MatchStatus), default=MatchStatus.UPCOMING, nullable=False)
     match_id: Mapped[int | None] = mapped_column(ForeignKey("live_matches.id", ondelete="SET NULL"), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 

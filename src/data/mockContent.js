@@ -221,15 +221,18 @@ export const shorts = [
 export const heroContent = {
   title: 'UNTOLD',
   tagline: 'The Story Behind The Glory',
-  eyebrow: 'UNTOLD Originals',
-  featuredTitle: 'UNTOLD: THE WARRIOR — YUVI',
-  featuredTagline: 'The story behind the rise of a legend.',
-  description: 'Premium sports storytelling — documentaries, live, and fan community.',
+  eyebrow: 'UNTOLD ORIGINALS · RIVALRY',
+  featuredTitle: 'UNTOLD: MESSI vs RONALDO',
+  featuredTagline: 'Two icons. One planet divided. The greatest rivalry in football history.',
+  description: 'Premium global sports storytelling — biopics, documentaries, rivalries, and untold stories from every arena.',
   cta: 'Watch Now',
   secondaryCta: 'Explore Originals',
-  image: '/assets/hero/warrior-yuvi.png',
-  heroImage: '/assets/hero/warrior-yuvi.png',
-  featuredId: 'orig-dhoni',
+  image: 'https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?w=900&q=85&auto=format&fit=crop',
+  heroImage: 'https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?w=900&q=85&auto=format&fit=crop',
+  featuredId: 'orig-messi-ronaldo',
+  sport: 'Football',
+  pillar: 'Rivalry',
+  format: 'Documentary',
 };
 
 export const featuredDocumentary = documentaries.find((d) => d.featured) || documentaries[0];

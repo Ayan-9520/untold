@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from app.api.v1 import admin, ai_pipeline, analytics, auth, categories, community, live, magazine, membership, news, payments, streaming, users, videos, watchlist
+from app.api.v1 import admin, ai_pipeline, analytics, auth, categories, community, live, magazine, membership, news, payments, streaming, studio, users, videos, watchlist
 from app.schemas.auth import TokenResponse, UserResponse
 
 api_router = APIRouter()
@@ -19,6 +19,7 @@ api_router.include_router(news.admin_router)
 api_router.include_router(analytics.router)
 api_router.include_router(admin.router)
 api_router.include_router(ai_pipeline.router)
+api_router.include_router(studio.router)
 api_router.include_router(membership.router)
 api_router.include_router(payments.router)
 api_router.include_router(payments.webhook_router)

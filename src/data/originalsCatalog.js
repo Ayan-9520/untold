@@ -1,4 +1,5 @@
 /** Sport-wise catalog — documentaries, biopics & feature films */
+import { SPORT_IMAGES } from './sportsImages';
 
 export const ORIGINAL_SPORTS_AVAILABLE = [
   'Cricket',
@@ -8,9 +9,13 @@ export const ORIGINAL_SPORTS_AVAILABLE = [
   'Swimming',
   'Baseball',
   'Basketball',
+  'Formula 1',
+  'Olympics',
+  'Hockey',
+  'Gymnastics',
 ];
 
-export const ORIGINAL_SPORTS_COMING_SOON = ['Formula 1', 'Olympics'];
+export const ORIGINAL_SPORTS_COMING_SOON = ['Kabaddi', 'MMA'];
 
 export const ORIGINAL_SPORTS = [
   'All',
@@ -22,71 +27,95 @@ export const ORIGINAL_FORMATS = ['All', 'Documentary', 'Biopic', 'Feature Film',
 
 export const SPORT_CARD_THEMES = {
   Cricket: {
-    image: 'https://images.unsplash.com/photo-1531415074968-076ba3e9f2e4?w=800&q=80',
+    image: SPORT_IMAGES.Cricket,
     accent: 'border-l-green-500',
     badge: 'bg-green-600/90',
     gradient: 'from-green-950/90 via-black/60 to-transparent',
   },
   Football: {
-    image: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=800&q=80',
+    image: SPORT_IMAGES.Football,
     accent: 'border-l-emerald-500',
     badge: 'bg-emerald-600/90',
     gradient: 'from-emerald-950/90 via-black/60 to-transparent',
   },
   Boxing: {
-    image: 'https://images.unsplash.com/photo-1549719386-74dfcbf7dbed?w=800&q=80',
+    image: SPORT_IMAGES.Boxing,
     accent: 'border-l-red-600',
     badge: 'bg-red-600/90',
     gradient: 'from-red-950/90 via-black/60 to-transparent',
   },
   Tennis: {
-    image: 'https://images.unsplash.com/photo-1554068865-24cecd4e24b8?w=800&q=80',
+    image: SPORT_IMAGES.Tennis,
     accent: 'border-l-yellow-500',
     badge: 'bg-yellow-600/90',
     gradient: 'from-yellow-950/80 via-black/60 to-transparent',
   },
   Swimming: {
-    image: 'https://images.unsplash.com/photo-1530549387789-4c1017266635?w=800&q=80',
+    image: SPORT_IMAGES.Swimming,
     accent: 'border-l-cyan-500',
     badge: 'bg-cyan-600/90',
     gradient: 'from-cyan-950/90 via-black/60 to-transparent',
   },
   Baseball: {
-    image: 'https://images.unsplash.com/photo-1566577739090-0d1bf7750eed?w=800&q=80',
+    image: SPORT_IMAGES.Baseball,
     accent: 'border-l-orange-500',
     badge: 'bg-orange-600/90',
     gradient: 'from-orange-950/90 via-black/60 to-transparent',
   },
   Basketball: {
-    image: 'https://images.unsplash.com/photo-1546519638-68e109498ffc?w=800&q=80',
+    image: SPORT_IMAGES.Basketball,
     accent: 'border-l-orange-600',
     badge: 'bg-orange-700/90',
     gradient: 'from-orange-950/90 via-black/60 to-transparent',
   },
   'Formula 1': {
-    image: 'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=800&q=80',
+    image: SPORT_IMAGES['Formula 1'],
     accent: 'border-l-red-500',
     badge: 'bg-red-600/90',
     gradient: 'from-red-950/90 via-black/70 to-transparent',
   },
   Olympics: {
-    image: 'https://images.unsplash.com/photo-1461896836934-ffe607ba7a38?w=800&q=80',
+    image: SPORT_IMAGES.Olympics,
     accent: 'border-l-blue-500',
     badge: 'bg-blue-600/90',
     gradient: 'from-blue-950/90 via-black/70 to-transparent',
   },
+  Hockey: {
+    image: SPORT_IMAGES.Hockey,
+    accent: 'border-l-sky-500',
+    badge: 'bg-sky-600/90',
+    gradient: 'from-sky-950/90 via-black/70 to-transparent',
+  },
+  Gymnastics: {
+    image: SPORT_IMAGES.Gymnastics,
+    accent: 'border-l-pink-500',
+    badge: 'bg-pink-600/90',
+    gradient: 'from-pink-950/90 via-black/70 to-transparent',
+  },
+  Kabaddi: {
+    image: SPORT_IMAGES.Kabaddi,
+    accent: 'border-l-amber-500',
+    badge: 'bg-amber-600/90',
+    gradient: 'from-amber-950/90 via-black/70 to-transparent',
+  },
+  MMA: {
+    image: SPORT_IMAGES.MMA,
+    accent: 'border-l-rose-600',
+    badge: 'bg-rose-600/90',
+    gradient: 'from-rose-950/90 via-black/70 to-transparent',
+  },
 };
 
 export const COMING_SOON_PLACEHOLDERS = {
-  'Formula 1': [
-    { id: 'f1-soon-1', teaser: 'Driver documentaries & championship rivalries' },
-    { id: 'f1-soon-2', teaser: 'Race-day drama from the paddock' },
-    { id: 'f1-soon-3', teaser: 'UNTOLD stories at 200 mph' },
+  Kabaddi: [
+    { id: 'kab-soon-1', teaser: 'Raid masters & arena legends' },
+    { id: 'kab-soon-2', teaser: 'Pro Kabaddi untold stories' },
+    { id: 'kab-soon-3', teaser: 'Strength, strategy, and glory' },
   ],
-  Olympics: [
-    { id: 'oly-soon-1', teaser: 'Gold medal moments & human triumph' },
-    { id: 'oly-soon-2', teaser: 'Legends of the Games — untold journeys' },
-    { id: 'oly-soon-3', teaser: 'Behind the podium — UNTOLD originals' },
+  MMA: [
+    { id: 'mma-soon-1', teaser: 'Octagon rivalries & comeback kings' },
+    { id: 'mma-soon-2', teaser: 'Fight night documentaries' },
+    { id: 'mma-soon-3', teaser: 'Behind the belt — UNTOLD originals' },
   ],
 };
 

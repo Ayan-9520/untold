@@ -44,13 +44,18 @@ function StepStatus({ status }) {
 export default function AILocalizationPage() {
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [usingMock, setUsingMock] = useState(false);
   const [selected, setSelected] = useState(null);
 
   const fetchJobs = () => {
     setLoading(true);
     aiPipeline.listJobs()
-      .then((data) => setJobs(data.items?.length ? data.items : MOCK_JOBS))
-      .catch(() => setJobs(MOCK_JOBS))
+      .then((data) => {
+        const items = data.items?.length ? data.items : MOCK_JOBS;
+        setJobs(items);
+        setUsingMock(!data.items?.length);
+      })
+      .catch(() => { setJobs(MOCK_JOBS); setUsingMock(true); })
       .finally(() => setLoading(false));
   };
 
@@ -67,6 +72,12 @@ export default function AILocalizationPage() {
           Upload once → AI distributes globally. Speech-to-text, translation, subtitles, dubbing.
         </p>
       </div>
+
+      {usingMock && (
+        <p className="text-xs px-3 py-2 rounded-lg bg-amber-500/10 text-amber-300 border border-amber-500/20">
+          Showing demo localization jobs — API pipeline not connected yet.
+        </p>
+      )}
 
       <div className="grid sm:grid-cols-3 gap-4">
         <StatCard title="Total Jobs" value={jobs.length} icon={FilmIcon} accent="gold" />

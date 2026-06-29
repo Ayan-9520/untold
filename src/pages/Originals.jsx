@@ -99,13 +99,21 @@ export default function Originals() {
 
           {isComingSoon && (
             <p className="text-center mt-10 text-sm dark:text-untold-muted light:text-gray-500">
-              Browse available sports now —{' '}
-              <button type="button" onClick={() => handleSportChange('Cricket')} className="text-untold-gold hover:underline">
-                Cricket
-              </button>
-              ,{' '}
+              Browse available sports —{' '}
               <button type="button" onClick={() => handleSportChange('Football')} className="text-untold-gold hover:underline">
                 Football
+              </button>
+              ,{' '}
+              <button type="button" onClick={() => handleSportChange('Basketball')} className="text-untold-gold hover:underline">
+                Basketball
+              </button>
+              ,{' '}
+              <button type="button" onClick={() => handleSportChange('Formula 1')} className="text-untold-gold hover:underline">
+                F1
+              </button>
+              ,{' '}
+              <button type="button" onClick={() => handleSportChange('Cricket')} className="text-untold-gold hover:underline">
+                Cricket
               </button>
               , and more.
             </p>

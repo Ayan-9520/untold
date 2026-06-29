@@ -20,11 +20,12 @@ export default function MembershipPage() {
   const [currency, setCurrency] = useState('USD');
   const [subscriptions, setSubscriptions] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [usingMock, setUsingMock] = useState(false);
 
   useEffect(() => {
     membership.getStats()
-      .then(setStats)
-      .catch(() => setStats(MOCK_STATS))
+      .then((d) => { setStats(d); setUsingMock(false); })
+      .catch(() => { setStats(MOCK_STATS); setUsingMock(true); })
       .finally(() => setLoading(false));
   }, []);
 
@@ -51,6 +52,12 @@ export default function MembershipPage() {
           Manage plans, pricing, and subscriber tiers — Free · Premium · VIP
         </p>
       </div>
+
+      {usingMock && (
+        <p className="text-xs px-3 py-2 rounded-lg bg-amber-500/10 text-amber-300 border border-amber-500/20">
+          Showing sample membership stats — connect backend for live subscriber data.
+        </p>
+      )}
 
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard title="Total Subscribers" value={stats.total_subscribers?.toLocaleString() || '—'} icon={UsersIcon} accent="gold" />

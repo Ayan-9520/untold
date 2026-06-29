@@ -1,14 +1,23 @@
+import { Link } from 'react-router-dom';
+import Logo from '../../components/brand/Logo';
+
 export default function Loader({ label = 'Loading', fullScreen = false }) {
   return (
     <div
-      className={`flex flex-col items-center justify-center gap-4
-        ${fullScreen ? 'min-h-[50vh]' : 'py-12'}`}
+      className={`ott-loader flex flex-col items-center justify-center gap-6
+        ${fullScreen ? 'min-h-screen bg-untold-dark' : 'py-16'}`}
       role="status"
       aria-live="polite"
       aria-label={label}
     >
-      <div className="w-10 h-10 border-2 border-untold-gold border-t-transparent rounded-full animate-spin" />
-      <p className="text-sm dark:text-untold-muted light:text-gray-500">{label}</p>
+      <div className="ott-loader-logo">
+        <Logo variant="compact" />
+      </div>
+      <div className="ott-loader-bar" aria-hidden="true">
+        <div className="ott-loader-bar-fill" />
+      </div>
+      <p className="text-xs font-semibold uppercase tracking-[0.3em] text-untold-gold">{label}</p>
+      <p className="text-[10px] text-untold-muted tracking-widest uppercase">The Story Behind The Glory</p>
     </div>
   );
 }

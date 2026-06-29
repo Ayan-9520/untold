@@ -6,7 +6,6 @@ import enum
 from sqlalchemy import (
     Boolean,
     DateTime,
-    Enum,
     Float,
     ForeignKey,
     Integer,
@@ -17,7 +16,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.db.base import Base
+from app.db.base import Base, StrEnum
 from app.models import SubscriptionPlan
 
 
@@ -52,7 +51,7 @@ class PlanCatalog(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     slug: Mapped[str] = mapped_column(String(50), unique=True, index=True, nullable=False)
     name: Mapped[str] = mapped_column(String(100), nullable=False)
-    tier: Mapped[SubscriptionPlan] = mapped_column(Enum(SubscriptionPlan), nullable=False)
+    tier: Mapped[SubscriptionPlan] = mapped_column(StrEnum(SubscriptionPlan), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     prices_json: Mapped[str] = mapped_column(Text, nullable=False, default="{}")
     features_json: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -69,12 +68,12 @@ class Payment(Base):
     subscription_id: Mapped[int | None] = mapped_column(
         ForeignKey("subscriptions.id", ondelete="SET NULL"), index=True, nullable=True
     )
-    provider: Mapped[PaymentProvider] = mapped_column(Enum(PaymentProvider), nullable=False)
+    provider: Mapped[PaymentProvider] = mapped_column(StrEnum(PaymentProvider), nullable=False)
     external_payment_id: Mapped[str | None] = mapped_column(String(255), index=True, nullable=True)
     external_order_id: Mapped[str | None] = mapped_column(String(255), index=True, nullable=True)
     amount: Mapped[float] = mapped_column(Float, nullable=False)
     currency: Mapped[str] = mapped_column(String(10), nullable=False, default="USD")
-    status: Mapped[PaymentStatus] = mapped_column(Enum(PaymentStatus), default=PaymentStatus.PENDING, nullable=False)
+    status: Mapped[PaymentStatus] = mapped_column(StrEnum(PaymentStatus), default=PaymentStatus.PENDING, nullable=False)
     plan_slug: Mapped[str | None] = mapped_column(String(50), nullable=True)
     metadata_json: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
@@ -92,7 +91,7 @@ class Invoice(Base):
     invoice_number: Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
     amount: Mapped[float] = mapped_column(Float, nullable=False)
     currency: Mapped[str] = mapped_column(String(10), nullable=False)
-    status: Mapped[InvoiceStatus] = mapped_column(Enum(InvoiceStatus), default=InvoiceStatus.DRAFT, nullable=False)
+    status: Mapped[InvoiceStatus] = mapped_column(StrEnum(InvoiceStatus), default=InvoiceStatus.DRAFT, nullable=False)
     pdf_url: Mapped[str | None] = mapped_column(String(1000), nullable=True)
     issued_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
@@ -146,7 +145,7 @@ class MagazineEdition(Base):
     title: Mapped[str] = mapped_column(String(500), nullable=False)
     quarter: Mapped[str | None] = mapped_column(String(20), nullable=True)
     year: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    access_tier: Mapped[AccessTier] = mapped_column(Enum(AccessTier), default=AccessTier.FREE, nullable=False)
+    access_tier: Mapped[AccessTier] = mapped_column(StrEnum(AccessTier), default=AccessTier.FREE, nullable=False)
     prices_json: Mapped[str | None] = mapped_column(Text, nullable=True)
     pdf_storage_key: Mapped[str | None] = mapped_column(String(500), nullable=True)
     cover_image_url: Mapped[str | None] = mapped_column(String(1000), nullable=True)

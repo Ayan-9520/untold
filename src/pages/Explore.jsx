@@ -44,7 +44,7 @@ export default function Explore() {
   const [query, setQuery] = useState(params.get('q') || '');
   const [sport, setSport] = useState(params.get('sport') || 'All');
   const [category, setCategory] = useState(params.get('category') || 'all');
-  const [sort, setSort] = useState(params.get('sort') || 'popular');
+  const [vertical, setVertical] = useState(params.get('vertical') || '');
 
   useEffect(() => {
     const next = new URLSearchParams();
@@ -52,21 +52,23 @@ export default function Explore() {
     if (sport !== 'All') next.set('sport', sport);
     if (category !== 'all') next.set('category', category);
     if (sort !== 'popular') next.set('sort', sort);
+    if (vertical) next.set('vertical', vertical);
     setParams(next, { replace: true });
-  }, [query, sport, category, sort, setParams]);
+  }, [query, sport, category, sort, vertical, setParams]);
 
   const searchResults = useMemo(() => exploreSearch(query), [query]);
 
   const filteredItems = useMemo(() => {
     let list = query.trim() ? searchResults.videos : videoCatalog;
     if (category !== 'all') list = list.filter((v) => v.category === category);
+    if (vertical) list = list.filter((v) => v.vertical === vertical);
     list = filterVideosBySport(list, sport);
     return sortVideos(list, sort);
-  }, [query, sport, category, sort, searchResults.videos]);
+  }, [query, sport, category, sort, vertical, searchResults.videos]);
 
   const trending = getTrendingVideos(8);
   const recommended = getRecommendedVideos(8);
-  const hasActiveFilters = query.trim() || sport !== 'All' || category !== 'all';
+  const hasActiveFilters = query.trim() || sport !== 'All' || category !== 'all' || vertical;
 
   const categoryOptions = useMemo(
     () => [
@@ -81,6 +83,7 @@ export default function Explore() {
     setSport('All');
     setCategory('all');
     setSort('popular');
+    setVertical('');
   };
 
   const sortSelect = (

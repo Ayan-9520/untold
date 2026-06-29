@@ -1,7 +1,7 @@
 {
   "brand": {
     "tagline": "The Story Behind The Glory",
-    "description": "Premium sports storytelling platform delivering documentaries, live sports, news, and untold stories from around the world."
+    "description": "Premium global sports storytelling — biopics, documentaries, rivalries, live coverage, and untold stories from every arena."
   },
   "nav": {
     "home": "Home",
@@ -27,6 +27,9 @@
     "profile": "Profile",
     "community": "Community",
     "app": "App",
+    "more": "More",
+    "browse": "Browse",
+    "studio": "Our Studio",
     "admin": "Admin"
   },
   "selectors": {
@@ -49,7 +52,7 @@
     "events": "Events",
     "eventsSubtitle": "Tournaments & match coverage",
     "originals": "Originals",
-    "originalsSubtitle": "Flagship documentaries & sports films",
+    "originalsSubtitle": "Flagship biopics, documentaries & sports films",
     "shorts": "Shorts",
     "shortsSubtitle": "Viral moments — optimized for reels & shares",
     "legends": "Legends",

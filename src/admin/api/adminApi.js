@@ -23,8 +23,8 @@ adminApi.interceptors.response.use(
       localStorage.removeItem(TOKEN_KEY);
       localStorage.removeItem(REFRESH_KEY);
       localStorage.removeItem('untold-admin-user');
-      if (!window.location.pathname.includes('/admin/login')) {
-        window.location.href = '/admin/login';
+      if (!window.location.pathname.includes('/studio/login')) {
+        window.location.href = '/studio/login';
       }
     }
     return Promise.reject(error);
@@ -110,6 +110,15 @@ export const magazine = {
   advanceJob: (id) => adminApi.post(`/magazine/admin/jobs/${id}/advance`).then((r) => r.data),
   approveIssue: (id) => adminApi.post(`/magazine/admin/jobs/${id}/approve`).then((r) => r.data),
   listIssues: () => adminApi.get('/magazine/issues').then((r) => r.data),
+};
+
+export const studio = {
+  listProductions: (params = {}) => adminApi.get('/admin/studio/productions', { params }).then((r) => r.data),
+  getProduction: (id) => adminApi.get(`/admin/studio/productions/${id}`).then((r) => r.data),
+  updateProduction: (id, data) => adminApi.patch(`/admin/studio/productions/${id}`, data).then((r) => r.data),
+  getAgents: () => adminApi.get('/admin/studio/agents').then((r) => r.data),
+  getAssets: () => adminApi.get('/admin/studio/assets').then((r) => r.data),
+  getScriptsSummary: () => adminApi.get('/admin/studio/scripts/summary').then((r) => r.data),
 };
 
 export default adminApi;

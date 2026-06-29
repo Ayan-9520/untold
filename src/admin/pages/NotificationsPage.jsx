@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import SearchFilter from '../components/SearchFilter';
+import AdminErrorBanner from '../components/AdminErrorBanner';
 import { notifications } from '../api/adminApi';
 import { BellIcon } from '../components/AdminIcons';
 
@@ -18,12 +19,18 @@ export default function NotificationsPage() {
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  useEffect(() => {
+  const load = () => {
+    setLoading(true);
+    setError(null);
     notifications.listEvents(100)
       .then(setEvents)
+      .catch((err) => setError(err.message || 'Failed to load events'))
       .finally(() => setLoading(false));
-  }, []);
+  };
+
+  useEffect(() => { load(); }, []);
 
   const filtered = events.filter((e) => {
     const matchSearch = !search || e.event_type.includes(search.toLowerCase());
@@ -49,6 +56,8 @@ export default function NotificationsPage() {
           Platform activity feed and event log
         </p>
       </div>
+
+      {error && <AdminErrorBanner message={error} onRetry={load} />}
 
       <SearchFilter
         value={search}
