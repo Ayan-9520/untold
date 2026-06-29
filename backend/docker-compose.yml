@@ -1,0 +1,96 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: untold_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: untold
+      POSTGRES_PASSWORD: untold_secret
+      POSTGRES_DB: untold_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U untold -d untold_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: untold_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  api:
+    build: .
+    container_name: untold_api
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql://untold:untold_secret@db:5432/untold_db
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/1
+      CELERY_RESULT_BACKEND: redis://redis:6379/2
+      SECRET_KEY: ${SECRET_KEY:?SECRET_KEY must be set}
+      ENVIRONMENT: production
+      DEBUG: "false"
+      SEED_DATABASE: ${SEED_DATABASE:-false}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      CORS_ORIGINS: http://localhost:5173,http://localhost:3000
+      RATE_LIMIT_ENABLED: "true"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  celery-worker:
+    build: .
+    container_name: untold_celery_worker
+    restart: unless-stopped
+    command: celery -A app.workers.celery_app worker --loglevel=info
+    environment:
+      DATABASE_URL: postgresql://untold:untold_secret@db:5432/untold_db
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/1
+      CELERY_RESULT_BACKEND: redis://redis:6379/2
+      SECRET_KEY: ${SECRET_KEY:?SECRET_KEY must be set}
+      ENVIRONMENT: production
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  celery-beat:
+    build: .
+    container_name: untold_celery_beat
+    restart: unless-stopped
+    command: celery -A app.workers.celery_app beat --loglevel=info
+    environment:
+      DATABASE_URL: postgresql://untold:untold_secret@db:5432/untold_db
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/1
+      CELERY_RESULT_BACKEND: redis://redis:6379/2
+      SECRET_KEY: ${SECRET_KEY:?SECRET_KEY must be set}
+      ENVIRONMENT: production
+      NEWS_FETCH_INTERVAL_MINUTES: 15
+    depends_on:
+      redis:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  redis_data:
