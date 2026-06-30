@@ -101,6 +101,7 @@ def _seed_data(db: Session) -> None:
         full_name="UNTOLD Admin",
         is_admin=True,
         role=UserRole.ADMIN,
+        studio_role="admin",
     )
     db.add(admin)
     db.flush()

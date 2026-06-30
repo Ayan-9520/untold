@@ -1,0 +1,7 @@
+{
+  "info": {
+    "title": "UNTOLD API",
+    "description": "Export with: cd backend && python scripts/export_openapi.py",
+    "version": "see untold-api.json after export"
+  }
+}

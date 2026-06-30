@@ -24,9 +24,10 @@ export function AdminAuthProvider({ children }) {
 
   const login = useCallback(async (email, password) => {
     const profile = await auth.login(email, password);
-    if (!profile.is_admin) {
+    const hasAccess = profile.is_admin || profile.studio_role;
+    if (!hasAccess) {
       auth.logout();
-      throw new Error('Admin access required');
+      throw new Error('Studio access required');
     }
     setUser(profile);
     return profile;
@@ -44,6 +45,9 @@ export function AdminAuthProvider({ children }) {
         loading,
         isAuthenticated: !!user,
         isAdmin: user?.is_admin ?? false,
+        hasStudioAccess: !!(user?.is_admin || user?.studio_role),
+        studioRole: user?.studio_role ?? null,
+        permissions: user?.permissions ?? [],
         login,
         logout,
       }}

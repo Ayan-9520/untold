@@ -2303,26 +2303,45 @@ html.light .doc-section-title {
   border: 1px solid var(--color-untold-border);
 }
 
-/* Header brand */
+/* Header brand — stacked wordmark + tagline */
 .site-header-brand {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
+  display: block;
 }
 
-.site-header-brand-text {
-  display: none;
-  font-size: 0.625rem;
-  font-weight: 800;
-  letter-spacing: 0.28em;
-  text-transform: uppercase;
-  color: var(--color-untold-gold);
+.brand-lockup--stacked {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.2rem;
   line-height: 1;
 }
 
+.brand-lockup-tagline {
+  font-family: var(--font-display, inherit);
+  font-size: 0.4375rem;
+  font-weight: 800;
+  letter-spacing: 0.38em;
+  text-transform: uppercase;
+  color: var(--color-untold-gold);
+  padding-left: 0.12em;
+  margin-top: -0.05rem;
+}
+
 @media (min-width: 480px) {
-  .site-header-brand-text {
-    display: block;
+  .brand-lockup-tagline {
+    font-size: 0.5rem;
+    letter-spacing: 0.42em;
+  }
+}
+
+@media (min-width: 768px) {
+  .brand-lockup--stacked {
+    gap: 0.25rem;
+  }
+
+  .brand-lockup-tagline {
+    font-size: 0.5625rem;
+    letter-spacing: 0.44em;
   }
 }
 
@@ -2530,6 +2549,89 @@ html.light .doc-section-title {
 
 .ecosystem-phase-milestones li.is-done .ecosystem-phase-check {
   color: var(--color-untold-gold);
+}
+
+/* Platform roadmap — Phases 1–37 */
+.platform-roadmap-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-width: 28rem;
+}
+
+.platform-roadmap-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.platform-roadmap-node,
+.platform-roadmap-group {
+  width: 100%;
+  border-radius: 0.75rem;
+  border: 1px solid var(--color-untold-border);
+  padding: 0.75rem 1rem;
+  background: rgba(255, 255, 255, 0.02);
+  transition: border-color 0.15s ease;
+}
+
+.platform-roadmap-link {
+  width: 100%;
+  text-decoration: none;
+  color: inherit;
+}
+
+.platform-roadmap-link:hover .platform-roadmap-node {
+  border-color: rgba(212, 175, 55, 0.4);
+}
+
+.platform-roadmap-node--done {
+  border-color: rgba(52, 211, 153, 0.25);
+}
+
+.platform-roadmap-phase-num {
+  display: block;
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-untold-muted);
+  margin-bottom: 0.25rem;
+}
+
+.platform-roadmap-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-untold-white);
+}
+
+.light .platform-roadmap-label {
+  color: #111;
+}
+
+.platform-roadmap-check {
+  margin-left: 0.35rem;
+  font-size: 0.75rem;
+}
+
+.platform-roadmap-desc {
+  margin: 0.35rem 0 0;
+  font-size: 0.7rem;
+  color: var(--color-untold-muted);
+  line-height: 1.4;
+}
+
+.platform-roadmap-arrow {
+  color: var(--color-untold-gold);
+  padding: 0.35rem 0;
+  font-size: 0.875rem;
+}
+
+.platform-roadmap-group {
+  cursor: pointer;
+}
+
+.platform-roadmap-group:hover {
+  border-color: rgba(212, 175, 55, 0.35);
 }
 
 /* Ecosystem map */
@@ -3186,4 +3288,29 @@ html.light .doc-section-title {
 .site-header-more-link--active {
   background: color-mix(in srgb, var(--color-untold-gold) 12%, transparent);
   color: var(--color-untold-gold);
+}
+
+.script-rich-editor__body:empty::before {
+  content: attr(data-placeholder);
+  color: var(--color-untold-muted);
+  pointer-events: none;
+}
+
+.script-rich-editor__body h1 { font-size: 1.5rem; font-weight: 700; margin: 1rem 0 0.5rem; }
+.script-rich-editor__body h2 { font-size: 1.25rem; font-weight: 600; margin: 0.875rem 0 0.5rem; }
+.script-rich-editor__body h3 { font-size: 1.1rem; font-weight: 600; margin: 0.75rem 0 0.35rem; }
+.script-rich-editor__body p { margin: 0.5rem 0; }
+.script-rich-editor__body ul,
+.script-rich-editor__body ol { margin: 0.5rem 0; padding-left: 1.5rem; }
+
+.workflow-canvas .react-flow__node {
+  font-family: inherit;
+}
+
+.workflow-node {
+  backdrop-filter: blur(8px);
+}
+
+.workflow-palette-item {
+  cursor: grab;
 }

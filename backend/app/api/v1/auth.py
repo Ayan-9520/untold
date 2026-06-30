@@ -2,14 +2,16 @@ from fastapi import APIRouter, Depends, Request, Response, status
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
-from app.core.deps import get_current_active_user
+from app.core.deps import get_current_active_user, get_current_studio_user
 from app.db.session import get_db
 from app.middleware.rate_limit import limiter
 from app.models import User
 from app.schemas.auth import (
+    GoogleLoginRequest,
     LoginRequest,
     RefreshTokenRequest,
     RegisterRequest,
+    StudioUserResponse,
     TokenResponse,
     UserResponse,
 )
@@ -42,3 +44,15 @@ def refresh_token(request: Request, response: Response, data: RefreshTokenReques
 @router.get("/me", response_model=UserResponse)
 def get_me(current_user: User = Depends(get_current_active_user)):
     return current_user
+
+
+@router.get("/studio/me", response_model=StudioUserResponse)
+def get_studio_me(current_user: User = Depends(get_current_studio_user)):
+    return AuthService.studio_user_response(current_user)
+
+
+@router.post("/google", response_model=TokenResponse)
+@limiter.limit(settings.rate_limit_auth)
+def google_login(request: Request, response: Response, data: GoogleLoginRequest, db: Session = Depends(get_db)):
+    _, tokens = AuthService.login_google(db, data.id_token)
+    return tokens

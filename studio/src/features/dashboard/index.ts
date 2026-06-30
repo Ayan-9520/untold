@@ -1,0 +1,13 @@
+export { default as StatCard } from './StatCard';
+export type { StatCardProps } from './StatCard';
+export { default as DashboardSection, ChartPanel } from './DashboardSection';
+export { default as ProductionPipelineChart } from './ProductionPipelineChart';
+export { default as MonthlyAnalyticsChart } from './MonthlyAnalyticsChart';
+export { default as ProjectStatusChart } from './ProjectStatusChart';
+export { default as RecentProductionsList } from './RecentProductionsList';
+export { default as ActivityFeed } from './ActivityFeed';
+export { default as DeadlinesList } from './DeadlinesList';
+export { default as NotificationsList } from './NotificationsList';
+export { DashboardSkeleton, DashboardError } from './DashboardSkeleton';
+export { useDashboard, DASHBOARD_QUERY_KEY } from './hooks/useDashboard';
+export * from './utils';

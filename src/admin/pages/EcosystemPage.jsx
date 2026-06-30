@@ -8,8 +8,8 @@ export default function EcosystemPage() {
     <div className="space-y-8">
       <StudioPageHeader
         section="Ecosystem"
-        title="Phase 1 · Phase 2 · Complete Map"
-        description={`How ${PRODUCTS.ORIGINALS.name}, ${PRODUCTS.STUDIO.name}, and ${PRODUCTS.AI.name} connect. Internal reference — not shown on public OTT nav.`}
+        title="Platform Roadmap · Phases 1–37"
+        description="Studio features (1–23) and AI platform layers (24–37) — how the full stack is built."
       >
         <Link
           to={aiPath()}

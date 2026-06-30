@@ -1,172 +1,167 @@
-import { useState, useEffect } from 'react';
-import DataTable from '../components/DataTable';
-import SearchFilter from '../components/SearchFilter';
-import Modal from '../components/Modal';
-import VideoUploadForm from '../components/VideoUploadForm';
-import Chip from '../../components/ui/Chip';
-import { videos, categories } from '../api/adminApi';
-import { CONTENT_PILLARS } from '../../data/contentPillars';
-import { PlusIcon } from '../components/AdminIcons';
+import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import StudioPageHeader from '../components/StudioPageHeader';
 import PipelineBar from '../components/PipelineBar';
-import { PRODUCTS } from '../../config/ecosystem';
+import StudioLiveBadge from '../components/StudioLiveBadge';
+import { studioPath, PRODUCTS } from '../../config/ecosystem';
+import { useProjects } from '../features/projects/hooks/useProjects';
+import {
+  usePublishingOverview,
+  usePublishingQueue,
+  usePublishingMutations,
+} from '../features/publishing/hooks/usePublishing';
+import PublishingQueueTable from '../features/publishing/components/PublishingQueueTable';
+import { PUBLISH_PLATFORMS, VISIBILITY_STATES } from '../features/publishing/constants';
+
+const FEATURES = [
+  { icon: '🎬', label: 'UNTOLD Originals' },
+  { icon: '▶️', label: 'YouTube' },
+  { icon: '📸', label: 'Instagram' },
+  { icon: '👤', label: 'Facebook' },
+  { icon: '𝕏', label: 'X' },
+  { icon: '📅', label: 'Schedule' },
+  { icon: '✅', label: 'Approval workflow' },
+  { icon: '🔍', label: 'SEO metadata' },
+  { icon: '🖼️', label: 'Thumbnail' },
+  { icon: '📤', label: 'Publishing queue' },
+  { icon: '↻', label: 'Retry failed' },
+];
 
 export default function ContentPage() {
-  const [activePillar, setActivePillar] = useState('originals');
-  const [videoList, setVideoList] = useState([]);
-  const [categoryList, setCategoryList] = useState([]);
-  const [search, setSearch] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [showUpload, setShowUpload] = useState(false);
-  const [page, setPage] = useState(1);
+  const [queueFilter, setQueueFilter] = useState('');
+  const { data: overview, isError } = usePublishingOverview();
+  const { data: queue, isLoading: queueLoading } = usePublishingQueue({
+    status: queueFilter || undefined,
+  });
+  const { data: projectsData, isLoading: projectsLoading } = useProjects({ stage: 'publishing', limit: 50 });
+  const mutations = usePublishingMutations(null);
 
-  const pillar = CONTENT_PILLARS.find((p) => p.id === activePillar) || CONTENT_PILLARS[0];
-  const isCatalogPillar = Boolean(pillar.catalog);
-
-  const fetchContent = () => {
-    if (isCatalogPillar) {
-      setLoading(false);
-      setVideoList([]);
-      return;
-    }
-    setLoading(true);
-    Promise.all([
-      videos.list({
-        page,
-        page_size: 20,
-        search: search || undefined,
-        video_type: pillar.videoType || undefined,
-      }),
-      categories.list(),
-    ])
-      .then(([v, c]) => {
-        const filtered = pillar.slug
-          ? v.items.filter((item) => item.category?.slug === pillar.slug || !item.category)
-          : v.items;
-        setVideoList(filtered.length ? filtered : v.items);
-        setCategoryList(c);
-      })
-      .finally(() => setLoading(false));
-  };
-
-  useEffect(() => { fetchContent(); }, [page, activePillar]);
-
-  useEffect(() => {
-    const timer = setTimeout(() => fetchContent(), 300);
-    return () => clearTimeout(timer);
-  }, [search]);
-
-  const handleDelete = async (video) => {
-    if (!confirm(`Remove "${video.title}"?`)) return;
-    await videos.delete(video.id);
-    fetchContent();
-  };
-
-  const columns = [
-    {
-      key: 'title',
-      label: 'Video',
-      render: (row) => (
-        <div className="flex items-center gap-3">
-          {row.image_url && (
-            <img src={row.image_url} alt="" className="w-12 h-8 rounded object-cover" />
-          )}
-          <div className="min-w-0">
-            <p className="font-medium truncate max-w-[200px]">{row.title}</p>
-            <p className="text-xs dark:text-untold-muted light:text-gray-500">{row.category?.name || pillar.label}</p>
-          </div>
-        </div>
-      ),
-    },
-    { key: 'video_type', label: 'Type', render: (row) => <span className="capitalize text-xs">{row.video_type}</span> },
-    { key: 'duration', label: 'Duration' },
-    { key: 'rating', label: 'Rating' },
-    { key: 'views_count', label: 'Views', render: (row) => row.views_count?.toLocaleString() },
-    {
-      key: 'flags',
-      label: 'Flags',
-      render: (row) => (
-        <div className="flex gap-1">
-          {row.is_featured && <span className="px-1.5 py-0.5 rounded text-[10px] bg-untold-gold/15 text-untold-gold">Featured</span>}
-          {row.is_trending && <span className="px-1.5 py-0.5 rounded text-[10px] bg-blue-500/15 text-blue-400">Trending</span>}
-        </div>
-      ),
-    },
-    {
-      key: 'actions',
-      label: '',
-      render: (row) => (
-        <button onClick={(e) => { e.stopPropagation(); handleDelete(row); }} className="text-xs text-red-400 hover:underline">
-          Remove
-        </button>
-      ),
-    },
-  ];
+  const projects = projectsData?.items || [];
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-8 animate-fade-in">
       <StudioPageHeader
         section="Publish"
         title="Publishing CMS"
-        description={`Upload, schedule, and publish documentaries to ${PRODUCTS.ORIGINALS.name}.`}
+        description={`Schedule, approve, and publish to ${PRODUCTS.ORIGINALS.name}, YouTube, Instagram, Facebook & X.`}
       >
-        {!isCatalogPillar && (
-          <button
-            type="button"
-            onClick={() => setShowUpload(true)}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-untold-gold text-untold-dark text-sm font-semibold hover:bg-untold-gold-light transition-colors shrink-0"
-          >
-            <PlusIcon className="w-4 h-4" />
-            Upload Video
-          </button>
-        )}
+        <StudioLiveBadge live={!isError} />
       </StudioPageHeader>
-      <PipelineBar activeStep="publishing" />
+      <PipelineBar activeStep="publisher" />
 
-      <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
-        {CONTENT_PILLARS.map((p) => (
-          <Chip key={p.id} active={activePillar === p.id} onClick={() => setActivePillar(p.id)}>
-            {p.label}
-          </Chip>
+      {overview && (
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+          {[
+            { label: 'Queue', value: overview.total_jobs },
+            { label: 'Pending approval', value: overview.pending_approval },
+            { label: 'Scheduled', value: overview.scheduled },
+            { label: 'Failed', value: overview.failed },
+            { label: 'Published', value: overview.published },
+          ].map((s) => (
+            <div key={s.label} className="ai-stat-card text-center">
+              <p className="text-xl font-bold text-untold-gold">{s.value}</p>
+              <p className="text-xs dark:text-untold-muted mt-1">{s.label}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        {FEATURES.map((f) => (
+          <div key={f.label} className="studio-module-card">
+            <span className="text-2xl">{f.icon}</span>
+            <p className="text-sm font-medium dark:text-white mt-2">{f.label}</p>
+          </div>
         ))}
       </div>
 
-      {isCatalogPillar ? (
-        <div className="rounded-xl border dark:border-white/10 light:border-gray-200 p-8 text-center">
-          <p className="text-lg font-semibold dark:text-untold-white light:text-black">{pillar.label} Catalog</p>
-          <p className="mt-2 text-sm dark:text-untold-muted light:text-gray-500 max-w-md mx-auto">
-            {pillar.label} content is managed via the events & news catalog pipeline.
-            Full CMS integration for {pillar.label.toLowerCase()} is scheduled in Backend Sprint 2.
-          </p>
-          <a href={pillar.route} target="_blank" rel="noreferrer" className="inline-block mt-4 text-sm text-untold-gold hover:underline">
-            Preview on site →
-          </a>
+      <section className="rounded-xl border dark:border-white/10 p-4 space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-sm font-semibold dark:text-white">Publishing queue</h2>
+          <div className="flex gap-2">
+            {['', 'pending_approval', 'scheduled', 'failed', 'published'].map((f) => (
+              <button
+                key={f || 'all'}
+                type="button"
+                onClick={() => setQueueFilter(f)}
+                className={`text-xs px-2 py-1 rounded-full border ${
+                  queueFilter === f ? 'border-untold-gold text-untold-gold' : 'dark:border-white/10 dark:text-untold-muted'
+                }`}
+              >
+                {f ? f.replace('_', ' ') : 'All'}
+              </button>
+            ))}
+          </div>
         </div>
-      ) : (
-        <>
-          <SearchFilter
-            value={search}
-            onChange={setSearch}
-            placeholder={`Search ${pillar.label.toLowerCase()}...`}
+        {queueLoading ? (
+          <div className="h-32 skeleton rounded-lg" />
+        ) : (
+          <PublishingQueueTable
+            jobs={queue}
+            onApprove={(id) => mutations.approveJob.mutate({ jobId: id })}
+            onReject={(id) => mutations.rejectJob.mutate({ jobId: id })}
+            onRetry={(id) => mutations.retryJob.mutate(id)}
           />
+        )}
+      </section>
 
-          {loading ? (
-            <div className="h-64 rounded-xl skeleton" />
-          ) : (
-            <DataTable columns={columns} data={videoList} emptyMessage={`No ${pillar.label.toLowerCase()} found`} />
-          )}
-        </>
-      )}
+      <section>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-sm font-semibold dark:text-white">Publishing workspaces</h2>
+          <Link to={studioPath('projects')} className="text-xs text-untold-gold hover:underline">All projects →</Link>
+        </div>
+        {projectsLoading ? (
+          <div className="h-32 skeleton rounded-xl" />
+        ) : projects.length === 0 ? (
+          <div className="rounded-xl border dark:border-white/10 p-8 text-center">
+            <p className="text-sm dark:text-untold-muted">No projects in publishing stage.</p>
+            <Link to={studioPath('projects')} className="text-sm text-untold-gold mt-2 inline-block">Move a project to publishing →</Link>
+          </div>
+        ) : (
+          <div className="grid gap-3 sm:grid-cols-2">
+            {projects.map((p) => (
+              <Link
+                key={p.id}
+                to={studioPath(`content/${p.id}`)}
+                className="studio-production-row hover:border-untold-gold/30 transition-colors"
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium dark:text-white text-sm truncate">{p.title}</p>
+                  <p className="text-xs dark:text-untold-muted mt-0.5 capitalize">
+                    {p.publishing_status || 'draft'} · {p.assignee}
+                  </p>
+                </div>
+                <span className="text-xs text-untold-gold shrink-0">Configure publish →</span>
+              </Link>
+            ))}
+          </div>
+        )}
+      </section>
 
-      <Modal open={showUpload} onClose={() => setShowUpload(false)} title={`Upload — ${pillar.label}`} wide>
-        <VideoUploadForm
-          categories={categoryList}
-          defaultType={pillar.videoType || 'documentary'}
-          defaultCategorySlug={pillar.slug}
-          onSuccess={() => { setShowUpload(false); fetchContent(); }}
-          onCancel={() => setShowUpload(false)}
-        />
-      </Modal>
+      <section className="grid sm:grid-cols-2 gap-4">
+        <div className="rounded-xl border dark:border-white/10 p-4">
+          <p className="text-xs font-semibold dark:text-white mb-3">Platforms</p>
+          <ul className="space-y-2">
+            {PUBLISH_PLATFORMS.map((p) => (
+              <li key={p.id} className="flex justify-between text-xs dark:text-untold-muted">
+                <span>{p.icon} {p.label}</span>
+                <span>{overview?.platform_counts?.[p.id] ?? 0} jobs</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+        <div className="rounded-xl border dark:border-white/10 p-4">
+          <p className="text-xs font-semibold dark:text-white mb-3">Visibility</p>
+          <ul className="space-y-2">
+            {VISIBILITY_STATES.map((v) => (
+              <li key={v.id} className="flex justify-between text-xs dark:text-untold-muted">
+                <span>{v.label}</span>
+                <span>{overview?.visibility_counts?.[v.id] ?? 0} projects</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
     </div>
   );
 }

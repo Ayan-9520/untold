@@ -56,9 +56,14 @@ export default function StudioPage() {
             <h2 className="font-display text-xl font-bold dark:text-white light:text-black mb-2">AI Agents</h2>
             <p className="text-sm dark:text-untold-muted light:text-gray-500">Research through publishing automation.</p>
           </div>
+        <div className="flex flex-col sm:flex-row sm:items-end gap-4 sm:gap-6">
+          <Link to={studioPath('marketplace')} className="studio-admin-link">
+            Agent Marketplace →
+          </Link>
           <Link to={studioPath('ai')} className="studio-admin-link">
             Open AI Command Center →
           </Link>
+        </div>
         </div>
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
           {AI_TEAM.map((agent) => (

@@ -40,7 +40,7 @@ PRODUCTIONS = [
     {
         "slug": "untold-ronaldo-legend",
         "title": "UNTOLD: Ronaldo — Making of a Legend",
-        "stage": "edit",
+        "stage": "editing",
         "status": "active",
         "assignee": "Post Production",
         "sources_count": 156,

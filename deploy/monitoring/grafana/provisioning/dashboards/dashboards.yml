@@ -1,0 +1,10 @@
+apiVersion: 1
+
+providers:
+  - name: UNTOLD
+    orgId: 1
+    folder: UNTOLD
+    type: file
+    disableDeletion: false
+    options:
+      path: /etc/grafana/provisioning/dashboards/json

@@ -1,0 +1,15 @@
+[run]
+source = app
+omit =
+    app/db/seed*
+    app/db/init_db.py
+    app/workers/*
+    */__pycache__/*
+
+[report]
+precision = 1
+show_missing = True
+skip_covered = True
+
+[html]
+directory = htmlcov

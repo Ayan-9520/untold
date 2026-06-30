@@ -3,6 +3,8 @@ import math
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
+from app.core.cache import cache_get, cache_key, cache_set
+from app.core.cache import cache_get, cache_key, cache_set
 from app.core.deps import get_current_admin, get_optional_user
 from app.db.session import get_db
 from app.models import User
@@ -11,6 +13,8 @@ from app.schemas.video import VideoCreateRequest, VideoListParams, VideoResponse
 from app.services.video_service import VideoService
 
 router = APIRouter(tags=["Videos"])
+_TRENDING_CACHE_TTL = 120
+_TRENDING_CACHE_TTL = 120
 
 
 @router.get("/videos", response_model=PaginatedResponse[VideoResponse])
@@ -24,6 +28,13 @@ def list_videos(
     search: str | None = None,
     db: Session = Depends(get_db),
 ):
+    cacheable = trending is True and not search and not category and page == 1
+    key = cache_key("videos", "trending", str(page_size), str(featured)) if cacheable else None
+    if key:
+        cached = cache_get(key)
+        if cached:
+            return PaginatedResponse[VideoResponse](**cached)
+
     params = VideoListParams(
         page=page,
         page_size=page_size,
@@ -34,13 +45,16 @@ def list_videos(
         search=search,
     )
     videos, total = VideoService.list_videos(db, params)
-    return PaginatedResponse(
+    response = PaginatedResponse(
         items=videos,
         total=total,
         page=page,
         page_size=page_size,
         pages=math.ceil(total / page_size) if total else 0,
     )
+    if key:
+        cache_set(key, response.model_dump(mode="json"), ttl=_TRENDING_CACHE_TTL)
+    return response
 
 
 @router.get("/videos/{video_id}", response_model=VideoResponse)

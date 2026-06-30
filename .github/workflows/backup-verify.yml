@@ -1,0 +1,34 @@
+name: Backup Verify
+
+on:
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+jobs:
+  verify-backup-script:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: untold
+          POSTGRES_PASSWORD: untold_secret
+          POSTGRES_DB: untold_db
+        ports:
+          - 5432:5432
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create sample data & backup
+        env:
+          PGPASSWORD: untold_secret
+          PGHOST: localhost
+          PGUSER: untold
+          PGDATABASE: untold_db
+          BACKUP_DIR: /tmp/backups
+        run: |
+          chmod +x deploy/scripts/backup.sh deploy/scripts/restore.sh
+          mkdir -p /tmp/backups
+          psql -h localhost -U untold -d untold_db -c "CREATE TABLE IF NOT EXISTS backup_test (id serial primary key);"
+          ./deploy/scripts/backup.sh
+          ls -lh /tmp/backups

@@ -1,0 +1,62 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-studio-black: #0a0a0a;
+  --color-studio-surface: #141414;
+  --color-studio-card: #1a1a1a;
+  --color-studio-border: #2a2a2a;
+  --color-studio-gold: #d4af37;
+  --color-studio-muted: #8a8a8a;
+  --font-display: 'Segoe UI', system-ui, sans-serif;
+}
+
+/* Dark (default — premium black + gold) */
+.dark body,
+:root body {
+  font-family: var(--font-display);
+  background: var(--color-studio-black);
+  color: #fff;
+}
+
+/* Light mode variant */
+.light body {
+  background: #f5f5f5;
+  color: #111;
+}
+
+.light .studio-glass {
+  background: rgba(255, 255, 255, 0.85);
+  border-color: #e5e5e5;
+}
+
+.light .text-white {
+  color: #111;
+}
+
+.light .text-studio-muted {
+  color: #666;
+}
+
+.studio-glass {
+  background: color-mix(in srgb, var(--color-studio-card) 72%, transparent);
+  backdrop-filter: blur(12px);
+  border: 1px solid color-mix(in srgb, var(--color-studio-gold) 12%, var(--color-studio-border));
+}
+
+.studio-sidebar-link {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.625rem 0.875rem;
+  border-radius: 0.5rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--color-studio-muted);
+  transition: background 0.15s, color 0.15s;
+}
+
+.studio-sidebar-link:hover,
+.studio-sidebar-link--active {
+  background: color-mix(in srgb, var(--color-studio-gold) 12%, transparent);
+  color: var(--color-studio-gold);
+}

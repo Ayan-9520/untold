@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: untold-config
+  namespace: untold
+data:
+  ENVIRONMENT: "production"
+  DEBUG: "false"
+  API_V1_PREFIX: "/api/v1"
+  RATE_LIMIT_ENABLED: "true"
+  METRICS_ENABLED: "true"
+  OTEL_ENABLED: "true"
+  OTEL_SERVICE_NAME: "untold-api"
+  OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector.untold.svc.cluster.local:4318"
+  ENABLE_WEBSOCKET: "true"
+  SEED_DATABASE: "false"
+  RUN_MIGRATIONS: "true"
+  CORS_ORIGINS: "https://studio.untold.com,https://untold.com"

@@ -1,0 +1,142 @@
+"""Plugin marketplace catalog — system and sample plugins."""
+
+from __future__ import annotations
+
+from app.domain.plugins.permissions import DEFAULT_GRANTED_PERMISSIONS
+
+PLUGIN_CATALOG: list[dict] = [
+    {
+        "slug": "slack-notify",
+        "name": "Slack Notify",
+        "description": "Send Slack alerts when workflows finish, publishing completes, or collaboration events occur.",
+        "icon": "💬",
+        "category": "integration",
+        "author": "UNTOLD",
+        "author_url": "https://untold.com/docs/plugins/slack-notify",
+        "backend_entry": "slack-notify",
+        "frontend_entry": "slack-notify",
+        "available_permissions": ["webhook.send", "notification.send", "workflow.read", "collab.read"],
+        "default_settings": {
+            "webhook_url": "",
+            "channel": "#studio-alerts",
+            "notify_on_workflow": True,
+            "notify_on_publish": True,
+            "notify_on_comments": False,
+        },
+        "manifest": {
+            "slug": "slack-notify",
+            "name": "Slack Notify",
+            "version": 1,
+            "hooks": [],
+            "subscribes": [
+                "workflow.run.finished",
+                "publish.completed",
+                "collab.comment.created",
+            ],
+            "permissions": ["webhook.send", "notification.send", "workflow.read", "collab.read"],
+            "entry_points": {"backend": "slack-notify", "frontend": "slack-notify"},
+            "settings_schema": {
+                "webhook_url": {"type": "string", "format": "uri", "title": "Slack Webhook URL"},
+                "channel": {"type": "string", "title": "Channel"},
+                "notify_on_workflow": {"type": "boolean", "title": "Workflow alerts"},
+                "notify_on_publish": {"type": "boolean", "title": "Publish alerts"},
+                "notify_on_comments": {"type": "boolean", "title": "Comment alerts"},
+            },
+            "frontend_panels": [{"id": "settings", "title": "Slack Settings", "route": "settings"}],
+        },
+    },
+    {
+        "slug": "custom-seo-formatter",
+        "name": "Custom SEO Formatter",
+        "description": "Apply custom prefixes, suffixes, and length limits to SEO titles and descriptions before export.",
+        "icon": "🔎",
+        "category": "production",
+        "author": "UNTOLD",
+        "author_url": "https://untold.com/docs/plugins/custom-seo",
+        "backend_entry": "custom-seo-formatter",
+        "frontend_entry": "custom-seo-formatter",
+        "available_permissions": ["project.read", "publish.schedule"],
+        "default_settings": {
+            "title_prefix": "",
+            "title_suffix": " | UNTOLD",
+            "max_title_length": 60,
+            "description_append": "Watch on UNTOLD.",
+        },
+        "manifest": {
+            "slug": "custom-seo-formatter",
+            "name": "Custom SEO Formatter",
+            "version": 1,
+            "hooks": ["seo.format_title", "seo.format_description"],
+            "subscribes": ["script.saved"],
+            "permissions": ["project.read", "publish.schedule"],
+            "entry_points": {"backend": "custom-seo-formatter", "frontend": "custom-seo-formatter"},
+            "settings_schema": {
+                "title_prefix": {"type": "string", "title": "Title prefix"},
+                "title_suffix": {"type": "string", "title": "Title suffix"},
+                "max_title_length": {"type": "integer", "min": 20, "max": 120, "title": "Max title length"},
+                "description_append": {"type": "string", "title": "Description suffix"},
+            },
+            "frontend_panels": [{"id": "seo-rules", "title": "SEO Rules", "route": "settings"}],
+        },
+    },
+    {
+        "slug": "workflow-logger",
+        "name": "Workflow Logger",
+        "description": "Detailed audit logging for every workflow node execution with configurable retention.",
+        "icon": "📋",
+        "category": "developer",
+        "author": "UNTOLD",
+        "backend_entry": None,
+        "frontend_entry": "workflow-logger",
+        "available_permissions": ["workflow.read", "admin.read"],
+        "default_settings": {
+            "log_level": "info",
+            "retention_days": 30,
+            "include_payload": False,
+        },
+        "manifest": {
+            "slug": "workflow-logger",
+            "name": "Workflow Logger",
+            "version": 1,
+            "hooks": ["workflow.after_node"],
+            "subscribes": ["workflow.node.completed", "workflow.run.finished"],
+            "permissions": ["workflow.read", "admin.read"],
+            "settings_schema": {
+                "log_level": {"type": "string", "enum": ["debug", "info", "warn"], "title": "Log level"},
+                "retention_days": {"type": "integer", "min": 1, "max": 365, "title": "Retention (days)"},
+                "include_payload": {"type": "boolean", "title": "Include node payload"},
+            },
+        },
+    },
+    {
+        "slug": "dashboard-widgets",
+        "name": "Studio Widgets Pack",
+        "description": "Adds custom dashboard widgets — pipeline health, recent AI spend, and team activity.",
+        "icon": "📊",
+        "category": "ui",
+        "author": "UNTOLD",
+        "backend_entry": None,
+        "frontend_entry": "dashboard-widgets",
+        "available_permissions": ["workflow.read", "admin.read", "collab.read"],
+        "default_settings": {
+            "show_pipeline_health": True,
+            "show_ai_spend": True,
+            "show_team_activity": True,
+        },
+        "manifest": {
+            "slug": "dashboard-widgets",
+            "name": "Studio Widgets Pack",
+            "version": 1,
+            "hooks": ["dashboard.widgets"],
+            "subscribes": [],
+            "permissions": ["workflow.read", "admin.read", "collab.read"],
+            "settings_schema": {
+                "show_pipeline_health": {"type": "boolean", "title": "Pipeline health widget"},
+                "show_ai_spend": {"type": "boolean", "title": "AI spend widget"},
+                "show_team_activity": {"type": "boolean", "title": "Team activity widget"},
+            },
+        },
+    },
+]
+
+DEFAULT_PLUGIN_GRANTED = DEFAULT_GRANTED_PERMISSIONS

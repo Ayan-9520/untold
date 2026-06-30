@@ -1,0 +1,25 @@
+export default function VideoPromptLibrary({ prompts, videoType, onUse }) {
+  const filtered = prompts?.filter((p) => {
+    if (!videoType) return true;
+    const t = p.parameters?.video_type;
+    return !t || t === videoType;
+  }) || [];
+
+  if (!filtered.length) {
+    return <p className="text-sm dark:text-untold-muted">No prompts for this type yet.</p>;
+  }
+
+  return (
+    <ul className="space-y-2 max-h-96 overflow-y-auto">
+      {filtered.map((p) => (
+        <li key={p.id} className="rounded-lg border dark:border-white/10 px-3 py-2">
+          <p className="text-sm font-medium dark:text-white">{p.title}</p>
+          {p.description && <p className="text-[10px] dark:text-untold-muted mt-0.5">{p.description}</p>}
+          <button type="button" onClick={() => onUse(p)} className="text-xs text-untold-gold mt-2 hover:underline">
+            Use prompt →
+          </button>
+        </li>
+      ))}
+    </ul>
+  );
+}

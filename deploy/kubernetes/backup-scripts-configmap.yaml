@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: untold-backup-scripts
+  namespace: untold
+data:
+  backup.sh: |
+    #!/bin/sh
+    set -eu
+    BACKUP_DIR="${BACKUP_DIR:-/backups}"
+    TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+    FILE="${BACKUP_DIR}/untold_${TIMESTAMP}.sql.gz"
+    RETENTION_DAYS="${BACKUP_RETENTION_DAYS:-14}"
+    mkdir -p "$BACKUP_DIR"
+    echo "[backup] Starting pg_dump -> $FILE"
+    pg_dump --no-owner --no-acl | gzip > "$FILE"
+    echo "[backup] Completed $(du -h "$FILE" | cut -f1)"
+    find "$BACKUP_DIR" -name 'untold_*.sql.gz' -mtime +"$RETENTION_DAYS" -delete 2>/dev/null || true
+    echo "[backup] Retention applied (${RETENTION_DAYS} days)"

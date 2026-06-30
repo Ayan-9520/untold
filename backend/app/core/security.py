@@ -1,3 +1,5 @@
+import secrets
+import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
@@ -18,22 +20,50 @@ def get_password_hash(password: str) -> str:
     return pwd_context.hash(password)
 
 
-def create_access_token(subject: str | int, extra_claims: dict[str, Any] | None = None) -> str:
+def _base_claims(subject: str | int, token_type: str, *, session_id: str | None = None) -> dict[str, Any]:
+    now = datetime.now(timezone.utc)
+    return {
+        "sub": str(subject),
+        "iat": now,
+        "type": token_type,
+        "jti": session_id or str(uuid.uuid4()),
+        "iss": settings.jwt_issuer,
+    }
+
+
+def create_access_token(
+    subject: str | int,
+    extra_claims: dict[str, Any] | None = None,
+    *,
+    session_id: str | None = None,
+) -> str:
     expire = datetime.now(timezone.utc) + timedelta(minutes=settings.access_token_expire_minutes)
-    payload = {"sub": str(subject), "exp": expire, "type": "access"}
+    payload = {**_base_claims(subject, "access", session_id=session_id), "exp": expire}
     if extra_claims:
         payload.update(extra_claims)
     return jwt.encode(payload, settings.secret_key, algorithm=settings.algorithm)
 
 
-def create_refresh_token(subject: str | int) -> str:
+def create_mfa_challenge_token(user_id: int) -> str:
+    expire = datetime.now(timezone.utc) + timedelta(minutes=5)
+    payload = {**_base_claims(user_id, "mfa_challenge"), "exp": expire}
+    return jwt.encode(payload, settings.secret_key, algorithm=settings.algorithm)
+
+
+def create_refresh_token(subject: str | int, *, session_id: str | None = None) -> str:
     expire = datetime.now(timezone.utc) + timedelta(days=settings.refresh_token_expire_days)
-    payload = {"sub": str(subject), "exp": expire, "type": "refresh"}
+    payload = {**_base_claims(subject, "refresh", session_id=session_id), "exp": expire}
     return jwt.encode(payload, settings.secret_key, algorithm=settings.algorithm)
 
 
 def decode_token(token: str) -> dict[str, Any]:
     try:
-        return jwt.decode(token, settings.secret_key, algorithms=[settings.algorithm])
+        payload = jwt.decode(token, settings.secret_key, algorithms=[settings.algorithm])
     except JWTError as exc:
         raise ValueError("Invalid or expired token") from exc
+
+    token_iss = payload.get("iss")
+    if token_iss and token_iss != settings.jwt_issuer:
+        raise ValueError("Invalid token issuer")
+
+    return payload

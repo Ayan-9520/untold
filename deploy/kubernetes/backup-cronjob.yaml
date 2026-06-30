@@ -1,0 +1,46 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: untold-db-backup
+  namespace: untold
+spec:
+  schedule: "0 3 * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 7
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: backup
+              image: postgres:16-alpine
+              command: ["/bin/sh", "/scripts/backup.sh"]
+              env:
+                - name: PGPASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: untold-secrets
+                      key: POSTGRES_PASSWORD
+                - name: PGHOST
+                  value: postgres
+                - name: PGUSER
+                  value: untold
+                - name: PGDATABASE
+                  value: untold_db
+                - name: BACKUP_DIR
+                  value: /backups
+              volumeMounts:
+                - name: backups
+                  mountPath: /backups
+                - name: scripts
+                  mountPath: /scripts
+          volumes:
+            - name: backups
+              persistentVolumeClaim:
+                claimName: untold-backup-pvc
+            - name: scripts
+              configMap:
+                name: untold-backup-scripts
+                defaultMode: 0755

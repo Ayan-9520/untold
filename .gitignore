@@ -10,6 +10,12 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
+coverage
+htmlcov
+.coverage
+coverage.xml
+playwright-report
+test-results
 *.local
 
 # Editor directories and files
@@ -22,3 +28,10 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Python / backend tests
+backend/.pytest_cache
+backend/htmlcov
+backend/.coverage
+backend/coverage.xml
+__pycache__/

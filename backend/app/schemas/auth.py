@@ -33,7 +33,16 @@ class UserResponse(ORMBase):
     is_active: bool
     is_admin: bool
     role: str
+    studio_role: str | None = None
     created_at: datetime
+
+
+class GoogleLoginRequest(BaseModel):
+    id_token: str = Field(min_length=10)
+
+
+class StudioUserResponse(UserResponse):
+    permissions: list[str] = []
 
 
 class UserUpdateRequest(BaseModel):

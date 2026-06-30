@@ -3,7 +3,7 @@ import { useAdminAuth } from '../context/AdminAuthContext';
 import { PRODUCTS } from '../../config/ecosystem';
 
 export default function ProtectedRoute({ children }) {
-  const { isAuthenticated, isAdmin, loading } = useAdminAuth();
+  const { isAuthenticated, hasStudioAccess, loading } = useAdminAuth();
 
   if (loading) {
     return (
@@ -13,7 +13,7 @@ export default function ProtectedRoute({ children }) {
     );
   }
 
-  if (!isAuthenticated || !isAdmin) {
+  if (!isAuthenticated || !hasStudioAccess) {
     return <Navigate to={PRODUCTS.STUDIO.loginPath} replace />;
   }
 

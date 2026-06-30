@@ -11,6 +11,7 @@ import {
 import EcosystemPhases from './EcosystemPhases';
 import EcosystemMap from './EcosystemMap';
 import EcosystemFlow from './EcosystemFlow';
+import PlatformRoadmap from './PlatformRoadmap';
 
 const PRODUCT_STYLES = {
   ORIGINALS: 'border-untold-gold/40 bg-untold-gold/10 text-untold-gold',
@@ -37,7 +38,15 @@ export default function EcosystemOverview({
   return (
     <div className="ecosystem-overview space-y-12">
       <section>
-        <h2 className="ecosystem-section-title">Roadmap</h2>
+        <h2 className="ecosystem-section-title">Platform roadmap</h2>
+        <p className="ecosystem-section-desc">
+          Phases 1–23 ship Studio features. Phases 24–37 build the AI platform layer underneath.
+        </p>
+        <PlatformRoadmap />
+      </section>
+
+      <section>
+        <h2 className="ecosystem-section-title">Business roadmap</h2>
         <p className="ecosystem-section-desc">
           Phase 1 proves the model internally. Phase 2 productizes AI for the world.
         </p>
@@ -64,7 +73,7 @@ export default function EcosystemOverview({
         <section>
           <h2 className="ecosystem-section-title">Studio production pipeline</h2>
           <p className="ecosystem-section-desc">
-            Eight stages inside {PRODUCTS.STUDIO.name} — team-only, never shown to subscribers.
+            Thirteen production stages inside {PRODUCTS.STUDIO.name} — Idea through Analytics.
           </p>
           <div className="ecosystem-pipeline">
             {STUDIO_PIPELINE.map((step, i) => (

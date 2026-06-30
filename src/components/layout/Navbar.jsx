@@ -45,7 +45,7 @@ function MobileMenu({ open, onClose, t, isAuthenticated, user, logout }) {
       <div className={`site-mobile-menu-panel ${isDark ? '' : 'site-mobile-menu-panel--light'}`}>
         <div className="site-mobile-menu-header">
           <Link to="/" onClick={onClose} className="site-header-logo">
-            <Logo variant="compact" />
+            <Logo variant="stacked" />
           </Link>
           <button type="button" className="site-mobile-menu-close" onClick={onClose} aria-label="Close">
             <CloseIcon className="w-6 h-6" />
@@ -159,9 +159,8 @@ export default function Navbar() {
     <>
       <header className={headerClass}>
         <div className="site-header-inner">
-          <Link to="/" className="site-header-logo site-header-brand">
-            <Logo variant="compact" />
-            <span className="site-header-brand-text">ORIGINALS</span>
+          <Link to="/" className="site-header-logo site-header-brand" aria-label="UNTOLD Originals — Home">
+            <Logo variant="stacked" />
           </Link>
 
           <nav className="site-header-nav hidden md:flex" aria-label="Main">

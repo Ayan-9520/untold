@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: untold
+  labels:
+    app.kubernetes.io/name: untold
+    app.kubernetes.io/part-of: untold-platform

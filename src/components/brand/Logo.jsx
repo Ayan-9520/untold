@@ -21,6 +21,19 @@ function LogoImg({ src, alt, className = '' }) {
 }
 
 export default function Logo({ variant = 'full', className = '', showTagline = true }) {
+  if (variant === 'stacked') {
+    return (
+      <div className={`brand-lockup brand-lockup--stacked ${className}`}>
+        <LogoImg
+          src={LOGO_WORDMARK}
+          alt="UNTOLD"
+          className={WORDMARK_SM}
+        />
+        <span className="brand-lockup-tagline" aria-hidden="true">ORIGINALS</span>
+      </div>
+    );
+  }
+
   if (variant === 'nav' || variant === 'compact') {
     return (
       <LogoImg

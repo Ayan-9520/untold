@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: untold-web
+  namespace: untold
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: untold-web
+  template:
+    metadata:
+      labels:
+        app: untold-web
+    spec:
+      containers:
+        - name: web
+          image: ghcr.io/untold/untold-web:latest
+          ports:
+            - containerPort: 80
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 80
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: untold-web
+  namespace: untold
+spec:
+  selector:
+    app: untold-web
+  ports:
+    - port: 80
+      targetPort: 80
