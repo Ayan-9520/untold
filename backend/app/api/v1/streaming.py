@@ -39,12 +39,17 @@ def get_stream_url(
     url, expires_in, fmt = StreamingService.get_signed_stream_url(
         video.id, video.stream_key, video.hls_url or video.video_url
     )
+    if video.hls_url and (video.hls_url.endswith(".m3u8") or "m3u8" in video.hls_url):
+        fmt = "hls"
     return StreamResponse(
         video_id=video.id,
         stream_url=url,
         expires_in=expires_in,
         access_tier=video.access_tier or "free",
         format=fmt,
+        subtitle_url=video.subtitle_url,
+        intro_end_seconds=video.intro_end_seconds,
+        next_video_id=video.next_video_id,
     )
 
 

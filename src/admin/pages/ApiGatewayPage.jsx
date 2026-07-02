@@ -118,9 +118,7 @@ export default function ApiGatewayPage() {
           <button
             key={t.id}
             type="button"
-            className={`px-3 py-1.5 rounded-full text-xs ${
-              tab === t.id ? 'bg-untold-gold/20 text-untold-gold' : 'dark:text-untold-muted hover:bg-white/5'
-            }`}
+            className={`studio-tab ${tab === t.id ? 'studio-tab--active' : ''}`}
             onClick={() => setTab(t.id)}
           >
             {t.label}

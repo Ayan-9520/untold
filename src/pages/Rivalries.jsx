@@ -1,12 +1,14 @@
+import { useTranslation } from 'react-i18next';
 import CategoryPage from '../components/pages/CategoryPage';
 
 export default function Rivalries() {
+  const { t } = useTranslation();
   return (
     <CategoryPage
       category="rivalries"
-      title="Rivalries"
-      tagline="Feuds"
-      description="India vs Pakistan, Messi vs Ronaldo, Federer vs Nadal, Senna vs Prost — the rivalries that defined eras."
+      title={t('nav.rivalries')}
+      tagline={t('categories.rivalries.tagline')}
+      description={t('categories.rivalries.description')}
     />
   );
 }

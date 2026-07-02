@@ -79,6 +79,7 @@ export default function AdminApp() {
             <Route path="admin" element={<StudioRoute><Pages.AdminPanelPage /></StudioRoute>} />
             <Route path="settings" element={<StudioRoute><Pages.AdminPanelPage /></StudioRoute>} />
             <Route path="membership" element={<StudioRoute><Pages.MembershipPage /></StudioRoute>} />
+            <Route path="ott-platform" element={<StudioRoute><Pages.OTTPlatformPage /></StudioRoute>} />
             <Route path="analytics" element={<StudioRoute><Pages.AnalyticsPage /></StudioRoute>} />
             <Route path="revenue" element={<StudioRoute><Pages.RevenuePage /></StudioRoute>} />
             <Route path="notifications" element={<StudioRoute><Pages.NotificationsPage /></StudioRoute>} />

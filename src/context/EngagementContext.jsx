@@ -1,5 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { contentApi } from '../api/content';
+import streamingApi from '../api/streaming';
+import { useWebAuth } from './WebAuthContext';
 
 const VOTES_KEY = 'untold-votes';
 const HISTORY_KEY = 'untold-watch-history';
@@ -17,14 +19,34 @@ function loadJson(key, fallback) {
 }
 
 export function EngagementProvider({ children }) {
+  const { isAuthenticated } = useWebAuth();
   const [votes, setVotes] = useState({});
   const [watchHistory, setWatchHistory] = useState([]);
+  const [serverContinue, setServerContinue] = useState([]);
   const [catalogPool, setCatalogPool] = useState([]);
 
   useEffect(() => {
     setVotes(loadJson(VOTES_KEY, {}));
     setWatchHistory(loadJson(HISTORY_KEY, []));
   }, []);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setServerContinue([]);
+      return;
+    }
+    streamingApi.getContinueWatching(12).then((items) => {
+      setServerContinue(
+        items.map((item) => ({
+          id: item.video_id,
+          title: item.title,
+          image: item.image_url,
+          progress: (item.progress_percent || 0) / 100,
+          watchedAt: Date.now(),
+        }))
+      );
+    }).catch(() => setServerContinue([]));
+  }, [isAuthenticated]);
 
   useEffect(() => {
     contentApi.getTrending()
@@ -127,10 +149,10 @@ export function EngagementProvider({ children }) {
     return scored.slice(0, 8);
   }, [watchHistory, catalogPool]);
 
-  const continueWatching = useMemo(
-    () => watchHistory.filter((h) => h.progress < 0.95).slice(0, 6),
-    [watchHistory]
-  );
+  const continueWatching = useMemo(() => {
+    const merged = serverContinue.length ? serverContinue : watchHistory;
+    return merged.filter((h) => h.progress < 0.95).slice(0, 6);
+  }, [watchHistory, serverContinue]);
 
   return (
     <EngagementContext.Provider

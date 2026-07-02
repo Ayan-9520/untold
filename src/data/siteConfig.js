@@ -39,6 +39,8 @@ export const FOOTER_CONTACT = {
   email: 'support@untold.com',
   phone: '+91 98765 43210',
   mapQuery: 'Lotus Corporate Park Goregaon East Mumbai',
+  mapLat: 19.1631,
+  mapLng: 72.8614,
   grievanceOfficer: 'Rajesh Mehta',
   grievanceEmail: 'grievance@untold.com',
   grievancePhone: '+91 98765 43211',

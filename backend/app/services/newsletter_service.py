@@ -25,3 +25,11 @@ class NewsletterService:
             body="You're on the list. We'll send you new documentaries, drops, and exclusive stories.",
         )
         return row
+
+    @staticmethod
+    def unsubscribe(db: Session, email: str) -> None:
+        normalized = email.strip().lower()
+        row = db.query(NewsletterSubscriber).filter(NewsletterSubscriber.email == normalized).first()
+        if row:
+            db.delete(row)
+            db.commit()

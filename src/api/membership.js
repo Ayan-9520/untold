@@ -6,6 +6,21 @@ export const membershipApi = {
     return data;
   },
 
+  async getSubscription() {
+    const { data } = await client.get('/membership/me');
+    return data;
+  },
+
+  async cancelSubscription() {
+    const { data } = await client.post('/membership/cancel');
+    return data;
+  },
+
+  async getPaymentHistory() {
+    const { data } = await client.get('/membership/payments');
+    return data;
+  },
+
   async subscribe({ planSlug, currency, region, provider }) {
     const { data } = await client.post('/subscribe', {
       plan_slug: planSlug,
@@ -16,12 +31,14 @@ export const membershipApi = {
     return data;
   },
 
-  async createOrder({ planSlug, currency, region, provider }) {
+  async createOrder({ planSlug, currency, region, provider, promoCode, billingCycle }) {
     const { data } = await client.post('/payments/create-order', {
       plan_slug: planSlug,
       currency,
       region,
       provider,
+      promo_code: promoCode || undefined,
+      billing_cycle: billingCycle || 'monthly',
     });
     return data;
   },

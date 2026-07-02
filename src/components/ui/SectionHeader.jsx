@@ -1,7 +1,11 @@
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { ChevronRightIcon } from '../icons';
 
-export default function SectionHeader({ title, subtitle, viewAllLink, viewAllText = 'View All' }) {
+export default function SectionHeader({ title, subtitle, viewAllLink, viewAllText }) {
+  const { t } = useTranslation();
+  const viewAllLabel = viewAllText || t('common.viewAll');
+
   return (
     <div className="flex items-end justify-between mb-6 px-4 sm:px-6 lg:px-8">
       <div>
@@ -17,7 +21,7 @@ export default function SectionHeader({ title, subtitle, viewAllLink, viewAllTex
           to={viewAllLink}
           className="flex items-center gap-1 text-sm font-medium text-untold-gold dark:hover:text-untold-gold-light light:text-untold-gold-dark light:hover:text-untold-gold transition-colors shrink-0"
         >
-          {viewAllText}
+          {viewAllLabel}
           <ChevronRightIcon className="w-4 h-4" />
         </Link>
       )}

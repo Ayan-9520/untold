@@ -9,6 +9,7 @@ import {
   formatPrice,
   currencyForLanguage,
   paymentsForLanguage,
+  regionForLanguage,
 } from '../data/regionalConfig';
 import { api } from '../api/client';
 import { mapVideo } from '../api/content';
@@ -27,6 +28,13 @@ export function LocaleProvider({ children }) {
   useEffect(() => {
     persistRegion(regionId);
   }, [regionId]);
+
+  useEffect(() => {
+    const indiaRegion = regionForLanguage(i18n.language);
+    if (indiaRegion && regionId !== indiaRegion) {
+      setRegionId(indiaRegion);
+    }
+  }, [i18n.language, regionId]);
 
   useEffect(() => {
     const sports = (region.sports || []).slice(0, 3);

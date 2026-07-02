@@ -1,12 +1,14 @@
+import { useTranslation } from 'react-i18next';
 import CategoryPage from '../components/pages/CategoryPage';
 
 export default function Stories() {
+  const { t } = useTranslation();
   return (
     <CategoryPage
       category="stories"
-      title="Stories"
-      tagline="Inspiration"
-      description="Emotional comebacks, underdog triumphs, historic wins, and the human stories behind sporting glory."
+      title={t('nav.stories')}
+      tagline={t('categories.stories.tagline')}
+      description={t('categories.stories.description')}
     />
   );
 }

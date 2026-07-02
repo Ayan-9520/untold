@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { api } from '../../api/client';
 import { mapVideo } from '../../api/content';
 import SectionHeader from '../ui/SectionHeader';
@@ -16,10 +17,13 @@ async function fetchRowItems(row) {
   switch (row.type) {
     case 'trending':
       return (await api.videos.list({ ...params, trending: true })).items.map(mapVideo);
+    case 'top10':
+      return (await api.videos.list({ ...params, trending: true, page_size: 10 })).items.map(mapVideo);
     case 'latest':
       return (await api.videos.list(params)).items.map(mapVideo);
     case 'award':
     case 'editors':
+    case 'comingSoon':
       return (await api.videos.list({ ...params, featured: true })).items.map(mapVideo);
     case 'category':
       return (await api.videos.list({ ...params, category: row.category })).items.map(mapVideo);
@@ -38,6 +42,7 @@ async function fetchRowItems(row) {
 }
 
 export default function HomeRow({ row }) {
+  const { t } = useTranslation();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(row.type !== 'continue');
 
@@ -79,11 +84,14 @@ export default function HomeRow({ row }) {
 
   if (!items.length) return null;
 
+  const title = row.titleKey ? t(row.titleKey) : row.title;
+  const subtitle = row.subtitleKey ? t(row.subtitleKey) : row.subtitle;
+
   return (
     <SectionReveal className="ott-row" aria-labelledby={`row-${row.type}-${row.vertical || row.category || ''}`}>
       <SectionHeader
-        title={row.title}
-        subtitle={row.subtitle}
+        title={title}
+        subtitle={subtitle}
         viewAllLink={row.viewAll}
       />
       <ContentRow>

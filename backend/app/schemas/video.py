@@ -25,6 +25,9 @@ class VideoResponse(ORMBase):
     is_trending: bool
     views_count: int
     is_active: bool
+    subtitle_url: str | None = None
+    intro_end_seconds: int | None = None
+    next_video_id: int | None = None
     created_at: datetime
 
 

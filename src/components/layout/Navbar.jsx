@@ -9,6 +9,7 @@ import SearchBar from '../ui/SearchBar';
 import ThemeToggle from '../ui/ThemeToggle';
 import RegionSelector from '../ui/RegionSelector';
 import LanguageSelector from '../ui/LanguageSelector';
+import LanguageQuickBar from '../ui/LanguageQuickBar';
 import MenuSearchField from '../ui/MenuSearchField';
 import { CloseIcon, MenuIcon } from '../icons';
 import { PRIMARY_NAV, MORE_NAV } from '../../data/siteNav';
@@ -59,6 +60,7 @@ function MobileMenu({ open, onClose, t, isAuthenticated, user, logout }) {
 
             <p className="site-mobile-menu-settings-title">Preferences</p>
             <div className="site-mobile-menu-prefs">
+              <LanguageQuickBar />
               <RegionSelector inMenu />
               <LanguageSelector inMenu />
             </div>
@@ -229,6 +231,7 @@ export default function Navbar() {
             </div>
           </div>
         </div>
+        <LanguageQuickBar />
       </header>
 
       <MobileMenu

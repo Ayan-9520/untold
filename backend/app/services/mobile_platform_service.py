@@ -47,6 +47,15 @@ class MobilePlatformService:
             row.meta = {**(row.meta or {}), **(meta or {})}
             row.last_seen_at = now
         else:
+            from app.services.membership_service import MembershipService
+            from app.services.viewer_profile_service import DEVICE_LIMITS
+
+            sub = MembershipService.get_active_subscription(db, user)
+            plan = sub.plan.value if sub else "free"
+            limit = DEVICE_LIMITS.get(plan, 1)
+            count = db.query(MobileDevice).filter(MobileDevice.user_id == user.id).count()
+            if count >= limit:
+                raise BadRequestError(f"Device limit reached ({limit}). Remove a device from Billing settings.")
             row = MobileDevice(
                 user_id=user.id,
                 app_type=app_type,
@@ -61,6 +70,16 @@ class MobilePlatformService:
         db.commit()
         db.refresh(row)
         return MobilePlatformService._device_dict(row)
+
+    @staticmethod
+    def list_devices(db: Session, user: User) -> list[dict]:
+        rows = (
+            db.query(MobileDevice)
+            .filter(MobileDevice.user_id == user.id)
+            .order_by(MobileDevice.last_seen_at.desc().nullslast(), MobileDevice.created_at.desc())
+            .all()
+        )
+        return [MobilePlatformService._device_dict(d) for d in rows]
 
     @staticmethod
     def unregister_device(db: Session, user: User, device_id: int) -> None:

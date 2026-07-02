@@ -30,6 +30,8 @@ def create_order(
         data.currency.upper(),
         data.region,
         data.provider,
+        promo_code=data.promo_code,
+        billing_cycle=data.billing_cycle,
     )
     return PaymentService.build_order_response(payment)
 

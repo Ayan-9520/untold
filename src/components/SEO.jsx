@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 
-export default function SEO({ title, description, path = '' }) {
+export default function SEO({ title, description, path = '', jsonLd = null }) {
   const fullTitle = title
     ? `${title} | UNTOLD`
     : 'UNTOLD — The Story Behind The Glory';
@@ -33,7 +33,21 @@ export default function SEO({ title, description, path = '' }) {
     if (canonical) {
       canonical.href = `${window.location.origin}${path}`;
     }
-  }, [fullTitle, desc, path]);
+
+    const scriptId = 'untold-json-ld';
+    let script = document.getElementById(scriptId);
+    if (jsonLd) {
+      if (!script) {
+        script = document.createElement('script');
+        script.id = scriptId;
+        script.type = 'application/ld+json';
+        document.head.appendChild(script);
+      }
+      script.textContent = JSON.stringify(jsonLd);
+    } else if (script) {
+      script.remove();
+    }
+  }, [fullTitle, desc, path, jsonLd]);
 
   return null;
 }

@@ -26,3 +26,15 @@ def subscribe_newsletter(
 ):
     NewsletterService.subscribe(db, data.email)
     return MessageResponse(message="You're on the list. Welcome to UNTOLD.")
+
+
+@router.post("/unsubscribe", response_model=MessageResponse)
+@limiter.limit("10/minute")
+def unsubscribe_newsletter(
+    request: Request,
+    response: Response,
+    data: NewsletterSubscribeRequest,
+    db: Session = Depends(get_db),
+):
+    NewsletterService.unsubscribe(db, data.email)
+    return MessageResponse(message="You've been unsubscribed.")

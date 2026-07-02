@@ -26,6 +26,8 @@ class PaymentService:
         currency: str,
         region: str,
         provider: str,
+        promo_code: str | None = None,
+        billing_cycle: str = "monthly",
     ) -> Payment:
         if plan_slug == "free":
             MembershipService.activate_subscription(db, user, "free", currency, region)
@@ -37,6 +39,13 @@ class PaymentService:
 
         prices = json.loads(plan.prices_json or "{}")
         amount = float(prices.get(currency, prices.get("USD", 0)))
+        if billing_cycle == "annual":
+            amount = round(amount * 10, 2)  # ~2 months free
+        if promo_code:
+            from app.services.platform_service import PlatformService
+
+            promo = PlatformService.validate_promo(db, promo_code, plan_slug)
+            amount = round(amount * (1 - promo["discount_percent"] / 100), 2)
         if amount <= 0:
             raise BadRequestError("Invalid plan price")
 
@@ -48,7 +57,7 @@ class PaymentService:
             currency=currency,
             status=PaymentStatus.PENDING,
             plan_slug=plan_slug,
-            metadata_json=json.dumps({"region": region}),
+            metadata_json=json.dumps({"region": region, "billing_cycle": billing_cycle, "promo_code": promo_code}),
         )
         db.add(payment)
         db.flush()
@@ -64,24 +73,53 @@ class PaymentService:
 
     @staticmethod
     def _init_stripe_order(db: Session, payment: Payment, user: User, plan_slug: str) -> None:
+        meta: dict = {}
+        try:
+            meta = json.loads(payment.metadata_json or "{}")
+        except json.JSONDecodeError:
+            pass
+
         if not settings.stripe_secret_key:
             payment.external_order_id = f"mock_stripe_{payment.id}_{secrets.token_hex(8)}"
-            payment.metadata_json = json.dumps(
-                {"mock": True, "client_secret": f"mock_secret_{payment.id}"}
-            )
+            meta["mock"] = True
+            meta["client_secret"] = f"mock_secret_{payment.id}"
+            payment.metadata_json = json.dumps(meta)
             return
 
         import stripe
 
         stripe.api_key = settings.stripe_secret_key
-        intent = stripe.PaymentIntent.create(
-            amount=int(payment.amount * 100) if payment.currency != "JPY" else int(payment.amount),
-            currency=payment.currency.lower(),
-            metadata={"user_id": str(user.id), "plan_slug": plan_slug, "payment_id": str(payment.id)},
-            receipt_email=user.email,
+        success_url = f"{settings.frontend_url.rstrip('/')}/membership?payment=success&payment_id={payment.id}"
+        cancel_url = f"{settings.frontend_url.rstrip('/')}/membership?payment=cancelled"
+
+        session = stripe.checkout.Session.create(
+            mode="payment",
+            customer_email=user.email,
+            line_items=[
+                {
+                    "price_data": {
+                        "currency": payment.currency.lower(),
+                        "unit_amount": int(payment.amount * 100) if payment.currency != "JPY" else int(payment.amount),
+                        "product_data": {
+                            "name": f"UNTOLD {plan_slug.title()} Membership",
+                            "description": f"30-day {plan_slug} plan access",
+                        },
+                    },
+                    "quantity": 1,
+                }
+            ],
+            metadata={
+                "user_id": str(user.id),
+                "plan_slug": plan_slug,
+                "payment_id": str(payment.id),
+            },
+            success_url=success_url,
+            cancel_url=cancel_url,
         )
-        payment.external_order_id = intent.id
-        payment.metadata_json = json.dumps({"client_secret": intent.client_secret})
+        payment.external_order_id = session.id
+        meta["checkout_url"] = session.url
+        meta["client_secret"] = session.id
+        payment.metadata_json = json.dumps(meta)
 
     @staticmethod
     def _init_razorpay_order(db: Session, payment: Payment, user: User) -> None:
@@ -118,6 +156,7 @@ class PaymentService:
             "currency": payment.currency,
             "plan_slug": payment.plan_slug,
             "client_secret": meta.get("client_secret"),
+            "checkout_url": meta.get("checkout_url"),
             "razorpay_order_id": payment.external_order_id if payment.provider == PaymentProvider.RAZORPAY else None,
             "razorpay_key_id": settings.razorpay_key_id if payment.provider == PaymentProvider.RAZORPAY else None,
         }
@@ -285,3 +324,25 @@ class PaymentService:
                         signature=signature,
                     )
         return {"status": "ok"}
+
+    @staticmethod
+    def list_user_payments(db: Session, user: User) -> list[dict]:
+        rows = (
+            db.query(Payment)
+            .filter(Payment.user_id == user.id)
+            .order_by(Payment.created_at.desc())
+            .limit(50)
+            .all()
+        )
+        return [
+            {
+                "id": p.id,
+                "amount": float(p.amount),
+                "currency": p.currency,
+                "status": p.status.value,
+                "plan_slug": p.plan_slug,
+                "provider": p.provider.value,
+                "created_at": p.created_at,
+            }
+            for p in rows
+        ]

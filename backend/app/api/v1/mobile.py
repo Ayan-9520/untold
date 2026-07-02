@@ -42,6 +42,14 @@ def unregister_device(
     MobilePlatformService.unregister_device(db, user, device_id)
 
 
+@router.get("/devices")
+def list_devices(
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_active_user),
+):
+    return MobilePlatformService.list_devices(db, user)
+
+
 @router.get("/offline-manifest")
 def offline_manifest(
     app_type: str = Query(..., pattern="^(studio|originals)$"),

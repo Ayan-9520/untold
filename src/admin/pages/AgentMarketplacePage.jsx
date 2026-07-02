@@ -42,7 +42,11 @@ function AgentCard({ agent, onInstall, onManage }) {
         </div>
       </div>
       <h3 className="font-semibold text-sm">{agent.name}</h3>
-      <p className="text-[10px] uppercase tracking-wider text-untold-gold mt-1">{agent.category}</p>
+      <p className="text-[10px] uppercase tracking-wider mt-1">
+        <span className={`studio-category-badge studio-category-badge--${agent.category || 'production'}`}>
+          {agent.category}
+        </span>
+      </p>
       <p className="text-xs dark:text-untold-muted mt-2 flex-1 leading-relaxed">{agent.description}</p>
       {agent.current_version && (
         <p className="text-[10px] dark:text-untold-muted mt-2">v{agent.current_version.version}</p>
@@ -146,7 +150,7 @@ function ManageDrawer({ installation, agent, onClose, mutations }) {
             <button
               key={t}
               type="button"
-              className={`px-3 py-1 rounded text-xs capitalize ${tab === t ? 'bg-untold-gold/20 text-untold-gold' : 'dark:text-untold-muted'}`}
+              className={`studio-tab capitalize ${tab === t ? 'studio-tab--active' : ''}`}
               onClick={() => setTab(t)}
             >
               {t}
@@ -307,9 +311,7 @@ export default function AgentMarketplacePage() {
           <button
             key={t.id}
             type="button"
-            className={`px-4 py-2 rounded text-sm ${
-              pageTab === t.id ? 'bg-untold-gold/20 text-untold-gold' : 'dark:text-untold-muted hover:bg-white/5'
-            }`}
+            className={`studio-tab ${pageTab === t.id ? 'studio-tab--active' : ''}`}
             onClick={() => setPageTab(t.id)}
           >
             {t.label}
@@ -347,9 +349,7 @@ export default function AgentMarketplacePage() {
               <button
                 key={c.id}
                 type="button"
-                className={`px-3 py-1.5 rounded-full text-xs ${
-                  category === c.id ? 'bg-untold-gold/20 text-untold-gold' : 'dark:text-untold-muted hover:bg-white/5'
-                }`}
+                className={`studio-tab ${category === c.id ? 'studio-tab--active' : ''}`}
                 onClick={() => setCategory(c.id)}
               >
                 {c.label}

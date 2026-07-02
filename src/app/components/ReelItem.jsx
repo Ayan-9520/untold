@@ -1,6 +1,8 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { BookmarkIcon, ShareIcon, PlayIcon, VolumeIcon, VolumeOffIcon } from '../../components/icons';
 import Logo from '../../components/brand/Logo';
+import { useLocalizedContent } from '../../hooks/useLocalizedContent';
 
 function HeartIcon({ className, filled }) {
   return (
@@ -32,6 +34,10 @@ export function getReelVideoUrl(short, index) {
 }
 
 export default function ReelItem({ short, index, isActive, onInView, height = '100dvh' }) {
+  const { t } = useTranslation();
+  const { localizeTitle, localizeViews, ui } = useLocalizedContent();
+  const displayTitle = localizeTitle(short.title, short.slug);
+  const displayViews = short.views ? localizeViews(short.views) : null;
   const videoRef = useRef(null);
   const containerRef = useRef(null);
   const [playing, setPlaying] = useState(false);
@@ -202,11 +208,11 @@ export default function ReelItem({ short, index, isActive, onInView, height = '1
           <Logo variant="compact" />
           <span className="text-sm font-bold text-white">UNTOLD</span>
           <button className="text-[10px] font-semibold text-white border border-white/40 px-2 py-0.5 rounded pointer-events-auto">
-            Follow
+            {ui('follow', t('content.ui.follow', 'Follow'))}
           </button>
         </div>
-        <h3 className="text-sm font-semibold text-white leading-snug line-clamp-2">{short.title}</h3>
-        <p className="text-xs text-white/60 mt-1">{short.views} views · {short.duration}</p>
+        <h3 className="text-sm font-semibold text-white leading-snug line-clamp-2">{displayTitle}</h3>
+        <p className="text-xs text-white/60 mt-1">{displayViews}{displayViews ? ' · ' : ''}{short.duration}</p>
       </div>
     </div>
   );

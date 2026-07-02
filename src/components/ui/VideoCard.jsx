@@ -1,9 +1,11 @@
 import { useState, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { PlayIcon, BookmarkIcon } from '../icons';
 import { useWatchlist } from '../../context/WatchlistContext';
+import { useLocalizedContent } from '../../hooks/useLocalizedContent';
 import Badge from './Badge';
 
-function WatchlistButton({ videoId, title, image, category, duration }) {
+function WatchlistButton({ videoId, title, image, category, duration, addLabel, removeLabel }) {
   const { isInWatchlist, toggleWatchlist } = useWatchlist();
   const inList = isInWatchlist(videoId);
   return (
@@ -14,7 +16,7 @@ function WatchlistButton({ videoId, title, image, category, duration }) {
         e.preventDefault();
         toggleWatchlist({ id: videoId, title, image, category, duration });
       }}
-      aria-label={inList ? 'Remove from watchlist' : 'Add to watchlist'}
+      aria-label={inList ? removeLabel : addLabel}
       className="absolute top-2 right-2 z-10 p-1.5 rounded-full bg-black/50 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-untold-gold hover:text-untold-dark"
     >
       <BookmarkIcon className="w-4 h-4" filled={inList} />
@@ -41,11 +43,18 @@ export default function VideoCard({
   fluid = false,
   compact = false,
 }) {
+  const { t } = useTranslation();
+  const { localizeTitle, localizeCategory, localizeFormat, localizeViews, ui } = useLocalizedContent();
   const isShort = variant === 'short';
   const isLegend = variant === 'legend';
   const isRivalry = variant === 'rivalry';
   const [hover, setHover] = useState(false);
   const videoRef = useRef(null);
+
+  const displayTitle = localizeTitle(title);
+  const displayCategory = category ? localizeCategory(category) : null;
+  const displayFormat = format ? localizeFormat(format) : null;
+  const displayViews = views ? localizeViews(views) : null;
 
   const widthClass = fluid
     ? 'w-full'
@@ -86,7 +95,7 @@ export default function VideoCard({
       >
         <img
           src={image}
-          alt={title}
+          alt={displayTitle}
           loading="lazy"
           className={`h-full w-full object-cover transition-all duration-500 group-hover:scale-105
             ${hover && trailerUrl ? 'opacity-0' : 'opacity-100'}`}
@@ -116,7 +125,15 @@ export default function VideoCard({
         )}
 
         {showWatchlist && videoId && (
-          <WatchlistButton videoId={videoId} title={title} image={image} category={category} duration={duration} />
+          <WatchlistButton
+            videoId={videoId}
+            title={title}
+            image={image}
+            category={category}
+            duration={duration}
+            addLabel={ui('addWatchlist', t('content.ui.addWatchlist', 'Add to watchlist'))}
+            removeLabel={ui('removeWatchlist', t('content.ui.removeWatchlist', 'Remove from watchlist'))}
+          />
         )}
 
         {duration && (
@@ -136,7 +153,7 @@ export default function VideoCard({
             ${isShort ? (fluid ? 'text-sm sm:text-base' : 'text-xs sm:text-sm') : ''}
             ${!fluid && !isShort ? (compact ? 'text-sm' : 'text-base') : ''}`}
         >
-          {title}
+          {displayTitle}
         </h3>
 
         {description && (isLegend || isRivalry || showDescription) && (
@@ -145,17 +162,17 @@ export default function VideoCard({
           </p>
         )}
 
-        {!isShort && (category || format || year || rating) && (
+        {!isShort && (displayCategory || displayFormat || year || rating) && (
           <div className={`${fluid ? 'mt-3 pt-3' : 'mt-2 pt-2'} border-t dark:border-untold-border/60 light:border-gray-100 flex flex-wrap items-center gap-2`}>
-            {category && <Badge variant="gold" size="sm">{category}</Badge>}
-            {format && <Badge variant="muted" size="sm">{format}</Badge>}
+            {displayCategory && <Badge variant="gold" size="sm">{displayCategory}</Badge>}
+            {displayFormat && <Badge variant="muted" size="sm">{displayFormat}</Badge>}
             {year && <Badge variant="outline" size="sm">{year}</Badge>}
             {rating && <Badge variant="outline" size="sm">{rating}</Badge>}
           </div>
         )}
 
-        {views && (
-          <p className="text-[10px] sm:text-xs dark:text-untold-muted light:text-gray-400 mt-1">{views} views</p>
+        {displayViews && (
+          <p className="text-[10px] sm:text-xs dark:text-untold-muted light:text-gray-400 mt-1">{displayViews}</p>
         )}
       </div>
     </article>

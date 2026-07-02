@@ -1,10 +1,14 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import ReelItem from './ReelItem';
 import Logo from '../../components/brand/Logo';
 import { BackIcon } from '../../components/icons';
+import { useLocalizedContent } from '../../hooks/useLocalizedContent';
 
 export default function ReelsFeed({ shorts, showHeader = true, initialIndex = 0, withBottomNav = true }) {
+  const { t } = useTranslation();
+  const { ui } = useLocalizedContent();
   const [activeIndex, setActiveIndex] = useState(initialIndex);
   const scrollRef = useRef(null);
   const navigate = useNavigate();
@@ -27,7 +31,7 @@ export default function ReelsFeed({ shorts, showHeader = true, initialIndex = 0,
   if (!shorts?.length) {
     return (
       <div className="h-dvh flex items-center justify-center bg-black text-white/60 text-sm">
-        No reels available
+        {ui('noReels', t('content.ui.noReels', 'No reels available'))}
       </div>
     );
   }
@@ -49,7 +53,7 @@ export default function ReelsFeed({ shorts, showHeader = true, initialIndex = 0,
           </button>
           <div className="flex items-center gap-2 pointer-events-auto">
             <Logo variant="compact" />
-            <span className="text-sm font-bold text-white tracking-wide">Reels</span>
+            <span className="text-sm font-bold text-white tracking-wide">{ui('reels', t('content.ui.reels', 'Reels'))}</span>
           </div>
           <div className="w-9" />
         </div>

@@ -31,6 +31,11 @@ const Watchlist = lazy(() => import('../pages/Watchlist'));
 const Blog = lazy(() => import('../pages/Blog'));
 const FanWars = lazy(() => import('../pages/FanWars'));
 const Predictions = lazy(() => import('../pages/Predictions'));
+const LegalPage = lazy(() => import('../pages/LegalPage'));
+const HelpPage = lazy(() => import('../pages/HelpPage'));
+const AppDownloadPage = lazy(() => import('../pages/AppDownloadPage'));
+const BillingPage = lazy(() => import('../pages/BillingPage'));
+const AccountSettings = lazy(() => import('../pages/AccountSettings'));
 
 export default function WebRoutes() {
   return (
@@ -65,6 +70,11 @@ export default function WebRoutes() {
         <Route path="/blog" element={<Blog />} />
         <Route path="/fan-wars" element={<FanWars />} />
         <Route path="/predictions" element={<Predictions />} />
+        <Route path="/help" element={<HelpPage />} />
+        <Route path="/app" element={<AppDownloadPage />} />
+        <Route path="/billing" element={<BillingPage />} />
+        <Route path="/settings" element={<AccountSettings />} />
+        <Route path="/legal/:slug" element={<LegalPage />} />
       </Routes>
     </Suspense>
   );

@@ -617,6 +617,13 @@ export const studioPlatform = {
 
   listStudioNotifications: (params) => adminApi.get('/studio/platform/notifications', { params }).then((r) => r.data),
   markStudioNotificationRead: (id) => adminApi.post(`/studio/platform/notifications/${id}/read`).then((r) => r.data),
+
+  listPages: () => adminApi.get('/studio/platform/pages').then((r) => r.data),
+  updatePage: (slug, data) => adminApi.patch(`/studio/platform/pages/${slug}`, data).then((r) => r.data),
+  listFaq: () => adminApi.get('/studio/platform/faq').then((r) => r.data),
+  upsertFaq: (data) => adminApi.put('/studio/platform/faq', data).then((r) => r.data),
+  listPromoCodes: () => adminApi.get('/studio/platform/promo-codes').then((r) => r.data),
+  createPromoCode: (data) => adminApi.post('/studio/platform/promo-codes', data).then((r) => r.data),
 };
 
 export const tenancy = {

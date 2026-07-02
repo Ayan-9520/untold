@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import Logo from '../brand/Logo';
 import {
@@ -12,6 +13,8 @@ import {
   MapPinIcon,
 } from '../icons';
 import { FOOTER_CONTACT, SOCIAL_LINKS } from '../../data/siteConfig';
+import FooterMap from './FooterMap';
+import client from '../../api/client';
 
 const ICON_MAP = {
   youtube: YoutubeIcon,
@@ -42,7 +45,8 @@ const categoryNavKeys = [
 ];
 
 const supportKeys = [
-  { to: '#contact', key: 'contactLink' },
+  { to: '/help', key: 'helpLink' },
+  { to: '/contact', key: 'contactLink' },
   { to: '/membership', key: 'membership' },
   { to: '/watchlist', key: 'watchlist' },
   { to: '/hub', key: 'hub' },
@@ -50,14 +54,16 @@ const supportKeys = [
 ];
 
 const legalKeys = [
-  { to: '#privacy', key: 'privacy' },
-  { to: '#terms', key: 'terms' },
+  { to: '/legal/privacy', key: 'privacy' },
+  { to: '/legal/terms', key: 'terms' },
+  { to: '/legal/refund', key: 'refund' },
   { to: '#grievance', key: 'grievance' },
 ];
 
 function FooterLinkGroup({ title, links, t, ns = 'nav' }) {
   const labelFor = (link) => {
     if (link.key === 'contactLink') return t('footer.contactLink');
+    if (link.key === 'helpLink') return t('footer.help', 'Help Center');
     if (ns === 'footer') return t(`footer.${link.key}`);
     return t(`nav.${link.key}`);
   };
@@ -86,7 +92,21 @@ function FooterLinkGroup({ title, links, t, ns = 'nav' }) {
 
 export default function Footer() {
   const { t } = useTranslation();
-  const mapSrc = `https://maps.google.com/maps?q=${encodeURIComponent(FOOTER_CONTACT.mapQuery)}&t=&z=15&ie=UTF8&iwloc=&output=embed`;
+  const [newsEmail, setNewsEmail] = useState('');
+  const [newsStatus, setNewsStatus] = useState('');
+
+  const onNewsletter = async (e) => {
+    e.preventDefault();
+    if (!newsEmail.trim()) return;
+    setNewsStatus('');
+    try {
+      await client.post('/newsletter/subscribe', { email: newsEmail.trim() });
+      setNewsStatus('Subscribed!');
+      setNewsEmail('');
+    } catch {
+      setNewsStatus('Could not subscribe. Try again.');
+    }
+  };
 
   return (
     <footer id="contact" className="site-footer">
@@ -104,17 +124,21 @@ export default function Footer() {
           </div>
 
           <div className="site-footer-premium-actions">
-            <form className="site-footer-newsletter" onSubmit={(e) => e.preventDefault()}>
+            <form className="site-footer-newsletter" onSubmit={onNewsletter}>
               <input
                 type="email"
+                value={newsEmail}
+                onChange={(e) => setNewsEmail(e.target.value)}
                 placeholder={t('footer.emailPlaceholder')}
                 aria-label="Newsletter email"
                 className="site-footer-newsletter-input"
+                required
               />
               <button type="submit" className="site-footer-newsletter-btn">
                 {t('footer.subscribe')}
               </button>
             </form>
+            {newsStatus && <p className="text-xs text-untold-gold mt-2">{newsStatus}</p>}
             <Link to="/membership" className="site-footer-membership-btn">
               {t('nav.membership')}
             </Link>
@@ -191,16 +215,7 @@ export default function Footer() {
           </div>
         </div>
 
-        {/* Map */}
-        <div className="site-footer-map">
-          <iframe
-            title="UNTOLD office location"
-            src={mapSrc}
-            className="site-footer-map-frame"
-            loading="lazy"
-            referrerPolicy="no-referrer-when-downgrade"
-          />
-        </div>
+        <FooterMap />
 
         {/* Bottom bar */}
         <div className="site-footer-bottom">
@@ -208,8 +223,9 @@ export default function Footer() {
             &copy; {new Date().getFullYear()} UNTOLD Media Pvt. Ltd. {t('footer.rights')}
           </p>
           <nav className="site-footer-legal-nav" aria-label="Legal">
-            <a id="privacy" href="#" className="site-footer-bottom-link">{t('footer.privacy')}</a>
-            <a id="terms" href="#" className="site-footer-bottom-link">{t('footer.terms')}</a>
+            <a href="/legal/privacy" className="site-footer-bottom-link">{t('footer.privacy')}</a>
+            <a href="/legal/terms" className="site-footer-bottom-link">{t('footer.terms')}</a>
+            <a href="/help" className="site-footer-bottom-link">{t('footer.help', 'Help')}</a>
             <a href="#contact" className="site-footer-bottom-link">{t('footer.contactLink')}</a>
           </nav>
         </div>

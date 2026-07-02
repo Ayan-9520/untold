@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from app.core.exceptions import BadRequestError, NotFoundError
 from app.models import Subscription, SubscriptionPlan, SubscriptionStatus, User
 from app.models.monetization import PlanCatalog
+from app.db.seed_monetization import PLANS as SEED_PLANS
 
 logger = logging.getLogger("untold")
 
@@ -38,6 +39,29 @@ class MembershipService:
             .order_by(PlanCatalog.sort_order.asc())
             .all()
         )
+
+        if not plans:
+            plans_data = SEED_PLANS
+            result = []
+            for plan in plans_data:
+                price = float(plan["prices"].get(currency, plan["prices"].get("USD", 0)))
+                result.append(
+                    {
+                        "id": 0,
+                        "slug": plan["slug"],
+                        "name": plan["name"],
+                        "tier": plan["tier"].value,
+                        "description": plan["description"],
+                        "price": price,
+                        "currency": currency,
+                        "features": plan["features"],
+                        "highlight": plan["slug"] == "premium",
+                    }
+                )
+            providers = REGION_PROVIDERS.get(region, ["stripe"])
+            if currency == "INR" and "razorpay" not in providers:
+                providers = ["razorpay", "stripe"]
+            return {"plans": result, "currency": currency, "region": region, "payment_providers": providers}
 
         result = []
         for plan in plans:
@@ -114,6 +138,18 @@ class MembershipService:
             )
             db.add(sub)
 
+        db.commit()
+        db.refresh(sub)
+        return sub
+
+    @staticmethod
+    def cancel_subscription(db: Session, user: User) -> Subscription:
+        sub = MembershipService.get_active_subscription(db, user)
+        if not sub:
+            raise NotFoundError("Subscription")
+        if sub.plan == SubscriptionPlan.FREE:
+            raise BadRequestError("Free plan cannot be cancelled")
+        sub.status = SubscriptionStatus.CANCELLED
         db.commit()
         db.refresh(sub)
         return sub

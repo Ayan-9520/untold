@@ -1,12 +1,14 @@
+import { useTranslation } from 'react-i18next';
 import CategoryPage from '../components/pages/CategoryPage';
 
 export default function Legends() {
+  const { t } = useTranslation();
   return (
     <CategoryPage
       category="legends"
-      title="Legends"
-      tagline="Icons"
-      description="Kapil Dev, Sachin, Dhoni, Maradona, Messi, Jordan, Senna, Bolt — athlete legacy storytelling across every sport."
+      title={t('nav.legends')}
+      tagline={t('categories.legends.tagline')}
+      description={t('categories.legends.description')}
     />
   );
 }

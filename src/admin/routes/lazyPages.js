@@ -43,6 +43,7 @@ export const TimelinePage = lazy(() => import('../pages/TimelinePage'));
 export const TimelineWorkspacePage = lazy(() => import('../pages/TimelineWorkspacePage'));
 export const AILocalizationPage = lazy(() => import('../pages/AILocalizationPage'));
 export const MembershipPage = lazy(() => import('../pages/MembershipPage'));
+export const OTTPlatformPage = lazy(() => import('../pages/OTTPlatformPage'));
 export const MagazinePage = lazy(() => import('../pages/MagazinePage'));
 export const NotificationsPage = lazy(() => import('../pages/NotificationsPage'));
 export const AdminPanelPage = lazy(() => import('../pages/AdminPanelPage'));

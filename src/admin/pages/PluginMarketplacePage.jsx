@@ -47,7 +47,11 @@ function PluginCard({ plugin, onInstall, onManage }) {
         </div>
       </div>
       <h3 className="font-semibold text-sm">{plugin.name}</h3>
-      <p className="text-[10px] uppercase tracking-wider text-untold-gold mt-1">{plugin.category}</p>
+      <p className="text-[10px] uppercase tracking-wider mt-1">
+        <span className={`studio-category-badge studio-category-badge--${plugin.category || 'production'}`}>
+          {plugin.category}
+        </span>
+      </p>
       <p className="text-[10px] dark:text-untold-muted">by {plugin.author}</p>
       <p className="text-xs dark:text-untold-muted mt-2 flex-1 leading-relaxed">{plugin.description}</p>
       <p className="text-[10px] dark:text-untold-muted mt-2">
@@ -401,9 +405,7 @@ export default function PluginMarketplacePage() {
               <button
                 key={c.id}
                 type="button"
-                className={`px-3 py-1.5 rounded-full text-xs ${
-                  category === c.id ? 'bg-untold-gold/20 text-untold-gold' : 'dark:text-untold-muted hover:bg-white/5'
-                }`}
+                className={`studio-tab ${category === c.id ? 'studio-tab--active' : ''}`}
                 onClick={() => setCategory(c.id)}
               >
                 {c.label}

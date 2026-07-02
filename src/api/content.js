@@ -19,6 +19,9 @@ export function mapVideo(v) {
     trending: v.is_trending,
     views: v.views_count,
     videoType: v.video_type,
+    subtitleUrl: v.subtitle_url,
+    introEndSeconds: v.intro_end_seconds,
+    nextVideoId: v.next_video_id,
   };
 }
 

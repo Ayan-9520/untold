@@ -18,7 +18,7 @@ export default function ShortsStudioPage() {
   const counts = overview?.queue_counts || {};
 
   return (
-    <div className="space-y-6">
+    <div className="studio-page space-y-6">
       <StudioPageHeader section="AI Shorts Generator" title="Shorts Studio"
         description="Long video → highlights · Reels · Shorts · TikTok · 9:16 · Captions · Publish queue">
         <StudioLiveBadge live={!isError} />
@@ -27,19 +27,19 @@ export default function ShortsStudioPage() {
         {['Queued', 'Running', 'Completed', 'Failed'].map((label) => (
           <div key={label} className="ai-stat-card text-center">
             <p className="text-2xl font-bold text-untold-gold">{counts[label.toLowerCase()] ?? 0}</p>
-            <p className="text-xs dark:text-untold-muted mt-1">{label}</p>
+            <p className="text-xs studio-muted mt-1">{label}</p>
           </div>
         ))}
       </div>
-      <div className="flex gap-1 border-b dark:border-white/10 pb-px">
+      <div className="studio-tab-bar">
         {PANELS.map((p) => (
           <button key={p} type="button" onClick={() => setPanel(p)}
-            className={`px-3 py-2 text-xs font-medium border-b-2 -mb-px ${panel === p ? 'border-untold-gold text-untold-gold' : 'border-transparent dark:text-untold-muted'}`}>
+            className={`studio-tab ${panel === p ? 'studio-tab--active' : ''}`}>
             {PANEL_LABELS[p]}
           </button>
         ))}
       </div>
-      <div className="rounded-xl border dark:border-white/10 p-5 dark:bg-untold-card/30 min-h-[420px]">
+      <div className="studio-card p-5 min-h-[420px]">
         {panel === 'generate' && (
           <ShortsGeneratorPanel overview={overview} generating={mutations.generate.isPending}
             onGenerate={(d) => { mutations.generate.mutate(d); setPanel('queue'); }} />

@@ -55,6 +55,7 @@ class User(Base):
     mfa_required: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     last_login_ip: Mapped[str | None] = mapped_column(String(64), nullable=True)
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    preferences_json: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
@@ -107,6 +108,9 @@ class Video(Base):
     video_url: Mapped[str | None] = mapped_column(String(1000), nullable=True)
     stream_key: Mapped[str | None] = mapped_column(String(500), nullable=True)
     hls_url: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    subtitle_url: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    intro_end_seconds: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    next_video_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
     access_tier: Mapped[str] = mapped_column(String(20), default="free", nullable=False, index=True)
     video_type: Mapped[VideoType] = mapped_column(StrEnum(VideoType), default=VideoType.DOCUMENTARY, nullable=False)
     is_featured: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)

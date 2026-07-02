@@ -23,7 +23,7 @@ export default function DashboardSection({
           </Link>
         )}
       </div>
-      <div className="rounded-xl border dark:border-white/10 light:border-gray-200 p-5 dark:bg-untold-card/30 light:bg-white">
+      <div className="studio-card p-5">
         {children}
       </div>
     </section>
@@ -33,12 +33,12 @@ export default function DashboardSection({
 export function ChartPanel({ title, subtitle, children, className = '' }) {
   return (
     <div
-      className={`rounded-xl p-5 sm:p-6 dark:bg-untold-surface light:bg-white border dark:border-white/5 light:border-gray-200 flex flex-col ${className}`}
+      className={`studio-card p-5 sm:p-6 flex flex-col ${className}`}
     >
       <div className="mb-4">
-        <h3 className="text-sm font-semibold dark:text-untold-white light:text-black">{title}</h3>
+        <h3 className="text-sm font-semibold">{title}</h3>
         {subtitle && (
-          <p className="text-xs dark:text-untold-muted light:text-gray-500 mt-0.5">{subtitle}</p>
+          <p className="text-xs studio-muted mt-0.5">{subtitle}</p>
         )}
       </div>
       <div className="flex-1 min-h-[240px]">{children}</div>

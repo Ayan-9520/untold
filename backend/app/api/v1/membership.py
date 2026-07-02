@@ -4,9 +4,18 @@ from sqlalchemy.orm import Session
 from app.core.deps import get_current_active_user
 from app.db.session import get_db
 from app.models import User
-from app.schemas.monetization import PlansListResponse, SubscribeRequest, SubscribeResponse, UserSubscriptionResponse
+from app.schemas.monetization import (
+    CancelSubscriptionResponse,
+    PaymentHistoryItem,
+    PlansListResponse,
+    SubscribeRequest,
+    SubscribeResponse,
+    UserSubscriptionResponse,
+)
 from app.services.membership_service import MembershipService
 from app.services.payment_service import PaymentService
+
+DEVICE_LIMITS = {"free": 1, "premium": 2, "vip": 4}
 
 router = APIRouter(tags=["Membership"])
 
@@ -18,13 +27,35 @@ def get_my_subscription(
 ):
     sub = MembershipService.get_active_subscription(db, current_user)
     if not sub:
-        return UserSubscriptionResponse(plan="free", status="active")
+        return UserSubscriptionResponse(plan="free", status="active", device_limit=DEVICE_LIMITS["free"])
     return UserSubscriptionResponse(
         plan=sub.plan.value,
         status=sub.status.value,
         started_at=sub.started_at,
         expires_at=sub.expires_at,
+        device_limit=DEVICE_LIMITS.get(sub.plan.value, 1),
     )
+
+
+@router.post("/membership/cancel", response_model=CancelSubscriptionResponse)
+def cancel_subscription(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    sub = MembershipService.cancel_subscription(db, current_user)
+    return CancelSubscriptionResponse(
+        message="Subscription cancelled. Access continues until period end.",
+        plan=sub.plan.value,
+        status=sub.status.value,
+    )
+
+
+@router.get("/membership/payments", response_model=list[PaymentHistoryItem])
+def payment_history(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    return PaymentService.list_user_payments(db, current_user)
 
 
 @router.get("/plans", response_model=PlansListResponse)

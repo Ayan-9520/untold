@@ -1,10 +1,12 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import SEO from '../components/SEO';
 import VideoCard, { VideoCardSkeleton } from '../components/ui/VideoCard';
 import ContentFilterBar from '../components/ui/ContentFilterBar';
 import ReelsFeed from '../app/components/ReelsFeed';
 import { contentApi } from '../api/content';
 import { PlayIcon } from '../components/icons';
+import { useLocalizedContent } from '../hooks/useLocalizedContent';
 import {
   buildSportCounts,
   filterBySport,
@@ -14,6 +16,8 @@ import {
 import { SHORTS_GRID_CLASS } from '../constants/contentLayout';
 
 export default function Shorts() {
+  const { t } = useTranslation();
+  const { localizeVideo, localizeSport, ui } = useLocalizedContent();
   const [shorts, setShorts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [reelsOpen, setReelsOpen] = useState(false);
@@ -27,16 +31,26 @@ export default function Shorts() {
     });
   }, []);
 
-  const sports = useMemo(() => getSportsFromItems(shorts, 'category'), [shorts]);
-  const sportCounts = useMemo(() => buildSportCounts(shorts, 'category'), [shorts]);
+  const localizedShorts = useMemo(() => shorts.map(localizeVideo), [shorts, localizeVideo]);
+
+  const sports = useMemo(() => getSportsFromItems(localizedShorts, 'category'), [localizedShorts]);
+  const sportCounts = useMemo(() => buildSportCounts(localizedShorts, 'category'), [localizedShorts]);
   const filtered = useMemo(
-    () => filterBySport(shorts, activeSport, 'category'),
-    [shorts, activeSport]
+    () => filterBySport(localizedShorts, activeSport, 'category'),
+    [localizedShorts, activeSport]
+  );
+
+  const sportOptions = useMemo(
+    () => toSportOptions(sports, sportCounts).map((opt) => ({
+      ...opt,
+      label: opt.label === 'All' ? ui('all', t('content.ui.all', 'All')) : localizeSport(opt.label),
+    })),
+    [sports, sportCounts, localizeSport, ui, t]
   );
 
   const openReels = (index = 0) => {
-    const list = activeSport === 'All' ? shorts : filtered;
-    const globalIndex = activeSport === 'All' ? index : shorts.findIndex((s) => s.id === list[index]?.id);
+    const list = activeSport === 'All' ? localizedShorts : filtered;
+    const globalIndex = activeSport === 'All' ? index : localizedShorts.findIndex((s) => s.id === list[index]?.id);
     setStartIndex(globalIndex >= 0 ? globalIndex : 0);
     setReelsOpen(true);
     document.body.style.overflow = 'hidden';
@@ -48,14 +62,14 @@ export default function Shorts() {
   };
 
   if (reelsOpen) {
-    const ordered = [...shorts.slice(startIndex), ...shorts.slice(0, startIndex)];
+    const ordered = [...localizedShorts.slice(startIndex), ...localizedShorts.slice(0, startIndex)];
     return (
       <div className="fixed inset-0 z-[100] bg-black">
         <button
           onClick={closeReels}
           className="absolute top-4 right-4 z-50 p-2 rounded-full bg-black/50 text-white text-sm px-3"
         >
-          ✕ Close
+          ✕ {ui('close', t('common.cancel', 'Close'))}
         </button>
         <div className="mx-auto max-w-[430px] h-full">
           <ReelsFeed shorts={ordered} showHeader={false} withBottomNav={false} />
@@ -67,8 +81,8 @@ export default function Shorts() {
   return (
     <>
       <SEO
-        title="Shorts"
-        description="Watch UNTOLD Reels — bite-sized sports moments like Instagram."
+        title={t('nav.shorts')}
+        description={t('home.shortsSubtitle')}
         path="/shorts"
       />
 
@@ -77,13 +91,13 @@ export default function Shorts() {
           <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-5">
             <div>
               <p className="dark:text-untold-gold light:text-untold-gold-dark text-xs font-semibold tracking-[0.3em] uppercase mb-2">
-                Reels
+                {ui('reels', t('content.ui.reels', 'Reels'))}
               </p>
               <h1 className="font-display text-3xl sm:text-4xl font-bold dark:text-untold-white light:text-black">
-                UNTOLD Shorts
+                {t('nav.shorts')}
               </h1>
               <p className="mt-2 text-sm dark:text-untold-muted light:text-gray-600">
-                Swipe vertically — bite-sized sports moments.
+                {ui('swipeVertical', t('content.ui.swipeVertical', 'Swipe vertically — bite-sized sports moments.'))}
               </p>
             </div>
             <button
@@ -91,20 +105,20 @@ export default function Shorts() {
               className="self-start sm:self-auto inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-untold-gold text-untold-dark text-sm font-semibold hover:bg-untold-gold-light transition-colors"
             >
               <PlayIcon className="w-4 h-4" />
-              Watch Reels
+              {ui('watchReels', t('content.ui.watchReels', 'Watch Reels'))}
             </button>
           </div>
 
-          {!loading && shorts.length > 0 && (
+          {!loading && localizedShorts.length > 0 && (
             <ContentFilterBar
               primary={{
-                label: 'Sport',
-                options: toSportOptions(sports, sportCounts),
+                label: ui('sport', t('content.ui.sport', 'Sport')),
+                options: sportOptions,
                 active: activeSport,
                 onChange: setActiveSport,
               }}
               resultCount={filtered.length}
-              resultLabel="shorts"
+              resultLabel={ui('shortsLabel', t('nav.shorts'))}
               onClear={() => setActiveSport('All')}
             />
           )}
@@ -134,7 +148,7 @@ export default function Shorts() {
 
           {!loading && filtered.length === 0 && (
             <p className="text-center py-12 text-sm dark:text-untold-muted light:text-gray-500">
-              No shorts for this sport yet.
+              {ui('noShorts', t('content.ui.noShorts', 'No shorts for this sport yet.'))}
             </p>
           )}
         </div>

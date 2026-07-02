@@ -39,7 +39,7 @@ export default function MusicStudioPage() {
   const counts = overview?.queue_counts || {};
 
   return (
-    <div className="space-y-6">
+    <div className="studio-page space-y-6">
       <StudioPageHeader
         section="AI Music Studio"
         title="Music Studio"
@@ -59,27 +59,25 @@ export default function MusicStudioPage() {
         ].map((s) => (
           <div key={s.label} className="ai-stat-card text-center">
             <p className="text-2xl font-bold text-untold-gold">{s.value}</p>
-            <p className="text-xs dark:text-untold-muted mt-1">{s.label}</p>
+            <p className="text-xs studio-muted mt-1">{s.label}</p>
           </div>
         ))}
       </div>
 
-      <div className="flex gap-1 overflow-x-auto border-b dark:border-white/10 pb-px">
+      <div className="studio-tab-bar">
         {PANELS.map((p) => (
           <button
             key={p}
             type="button"
             onClick={() => setPanel(p)}
-            className={`px-3 py-2 text-xs font-medium whitespace-nowrap border-b-2 -mb-px transition-colors ${
-              panel === p ? 'border-untold-gold text-untold-gold' : 'border-transparent dark:text-untold-muted'
-            }`}
+            className={`studio-tab ${panel === p ? 'studio-tab--active' : ''}`}
           >
             {PANEL_LABELS[p]}
           </button>
         ))}
       </div>
 
-      <div className="rounded-xl border dark:border-white/10 p-5 dark:bg-untold-card/30 min-h-[420px]">
+      <div className="studio-card p-5 min-h-[420px]">
         {panel === 'generate' && (
           <MusicGeneratorPanel
             key={`${category}-${promptPrefill}`}

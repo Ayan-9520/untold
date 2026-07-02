@@ -46,7 +46,7 @@ export default function DashboardPage() {
   const unreadNotifications = (data.notifications || []).filter((n) => !n.is_read).length;
 
   return (
-    <div className="space-y-8 animate-fade-in">
+    <div className="studio-page space-y-8 animate-fade-in">
       {!data.live && (
         <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200/90">
           Partial dashboard data — studio platform API unavailable; showing aggregated stats from available endpoints.

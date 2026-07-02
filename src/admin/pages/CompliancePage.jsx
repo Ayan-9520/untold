@@ -49,7 +49,7 @@ export default function CompliancePage() {
   ];
 
   return (
-    <div>
+    <div className="studio-page">
       <StudioPageHeader
         title="Enterprise Compliance"
         description="GDPR, SOC2, ISO27001 — consent, retention, privacy requests, and access monitoring."
@@ -61,16 +61,14 @@ export default function CompliancePage() {
             key={t.id}
             type="button"
             onClick={() => setTab(t.id)}
-            className={`rounded-lg px-3 py-1.5 text-sm ${
-              tab === t.id ? 'bg-rose-600 text-white' : 'bg-neutral-800 text-neutral-300'
-            }`}
+            className={`studio-tab ${tab === t.id ? 'studio-tab--active' : ''}`}
           >
             {t.label}
           </button>
         ))}
       </div>
 
-      {isLoading && <p className="mt-6 text-sm dark:text-untold-muted">Loading compliance data…</p>}
+      {isLoading && <p className="mt-6 text-sm studio-muted">Loading compliance data…</p>}
 
       {!isLoading && tab === 'report' && data?.report && (
         <div className="mt-6 space-y-4">

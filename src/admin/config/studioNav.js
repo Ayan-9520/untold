@@ -59,6 +59,7 @@ export const STUDIO_NAV = [
       { to: studioPath('bi'), icon: BarChartIcon, label: 'Business Intelligence' },
       { to: studioPath('analytics'), icon: BarChartIcon, label: 'Viewer Analytics' },
       { to: studioPath('membership'), icon: CreditCardIcon, label: 'Subscriptions' },
+      { to: studioPath('ott-platform'), icon: GlobeIcon, label: 'OTT Platform' },
       { to: studioPath('revenue'), icon: DollarSignIcon, label: 'Revenue' },
     ],
   },

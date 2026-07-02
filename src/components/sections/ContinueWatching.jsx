@@ -53,7 +53,7 @@ export default function ContinueWatching() {
                 <div className="h-full bg-untold-gold transition-all" style={{ width: `${Math.min(item.progress * 100, 100)}%` }} />
               </div>
               <span className="absolute bottom-2 left-2 text-[10px] font-bold uppercase tracking-wider text-white/90">
-                Resume
+                {t('rows.resume')}
               </span>
             </div>
             <p className="mt-2 text-sm font-semibold dark:text-untold-white light:text-black line-clamp-2 group-hover:text-untold-gold transition-colors">

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import Button from '../ui/Button';
 import { PlayIcon, InfoIcon, ChevronLeftIcon, ChevronRightIcon, BookmarkIcon } from '../icons';
@@ -9,10 +10,12 @@ import HeroTitle from './HeroTitle';
 import HeroPosterLightbox from './HeroPosterLightbox';
 import HeroFanCards from './HeroFanCards';
 import HeroSportsGrid from './HeroSportsGrid';
+import { useLocalizedContent } from '../../hooks/useLocalizedContent';
 
 const AUTO_MS = 6000;
 
 export default function HeroBanner({ content }) {
+  const { t } = useTranslation();
   const slides = content?.slides?.length ? content.slides : defaultSlides;
   const [index, setIndex] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
@@ -21,7 +24,11 @@ export default function HeroBanner({ content }) {
   const slide = slides[index];
   const featuredId = slide.featuredId;
   const { isInWatchlist, toggleWatchlist } = useWatchlist();
+  const { localizeTitle, localizeCategory, localizeFormat } = useLocalizedContent();
   const inList = featuredId ? isInWatchlist(featuredId) : false;
+  const slideTitle = localizeTitle(slide.featuredTitle || slide.title, slide.slug);
+  const slideSport = slide.sport ? localizeCategory(slide.sport) : null;
+  const slideFormat = slide.format ? localizeFormat(slide.format) : null;
   const fullSrc =
     slide.fullImage || slide.cardImage || slide.posterImage || slide.heroImage;
   const watchLink = slide.featuredId ? `/video/${slide.featuredId}` : '/originals';
@@ -115,13 +122,13 @@ export default function HeroBanner({ content }) {
                 </p>
                 {(slide.sport || slide.pillar || slide.format) && (
                   <div className="hero-meta-tags mb-3 sm:mb-4">
-                    {slide.sport && <span className="hero-meta-tag">{slide.sport}</span>}
+                    {slideSport && <span className="hero-meta-tag">{slideSport}</span>}
                     {slide.pillar && <span className="hero-meta-tag hero-meta-tag--gold">{slide.pillar}</span>}
-                    {slide.format && <span className="hero-meta-tag">{slide.format}</span>}
+                    {slideFormat && <span className="hero-meta-tag">{slideFormat}</span>}
                   </div>
                 )}
-                <HeroTitle featuredTitle={slide.featuredTitle} />
-                <p className="hero-tagline mt-3 sm:mt-4 mx-auto lg:mx-0">{slide.featuredTagline}</p>
+                <HeroTitle featuredTitle={slideTitle} />
+                <p className="hero-tagline mt-3 sm:mt-4 mx-auto lg:mx-0">{slide.featuredTagline || slide.subtitle}</p>
 
                 <div className="hero-ott-meta mt-4 flex flex-wrap gap-2 justify-center lg:justify-start text-xs text-white/75">
                   {slide.duration && <span className="hero-ott-badge">{slide.duration}</span>}
@@ -138,7 +145,7 @@ export default function HeroBanner({ content }) {
                       icon={<PlayIcon className="w-5 h-5" />}
                       className="gold-glow-sm min-w-[140px] font-bold"
                     >
-                      {slide.cta || 'Watch Now'}
+                      {slide.cta || t('hero.watchNow')}
                     </Button>
                   </Link>
                   <Link to={`${watchLink}?trailer=1`}>
@@ -147,7 +154,7 @@ export default function HeroBanner({ content }) {
                       size="lg"
                       className="bg-white/12 text-white hover:bg-white/20 border border-white/20 backdrop-blur-sm font-semibold min-w-[130px]"
                     >
-                      Watch Trailer
+                      {t('hero.watchTrailer')}
                     </Button>
                   </Link>
                   {featuredId && (
@@ -158,7 +165,7 @@ export default function HeroBanner({ content }) {
                       onClick={() => toggleWatchlist({ id: featuredId, title: slide.featuredTitle || slide.title, image: slide.cardImage })}
                       className="bg-white/8 text-white hover:bg-white/15 border border-white/15"
                     >
-                      {inList ? 'In List' : 'My List'}
+                      {inList ? t('hero.inList') : t('hero.myList')}
                     </Button>
                   )}
                   <Link to="/originals">
@@ -168,7 +175,7 @@ export default function HeroBanner({ content }) {
                       icon={<InfoIcon className="w-5 h-5" />}
                       className="bg-white/8 text-white hover:bg-white/15 border border-white/15 font-semibold"
                     >
-                      {slide.secondaryCta || 'Explore'}
+                      {slide.secondaryCta || t('hero.explore')}
                     </Button>
                   </Link>
                 </div>
@@ -180,7 +187,7 @@ export default function HeroBanner({ content }) {
 
       <HeroPosterLightbox
         image={fullSrc}
-        title={slide.featuredTitle}
+        title={slideTitle}
         open={lightboxOpen}
         onClose={() => setLightboxOpen(false)}
       />

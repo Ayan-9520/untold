@@ -9,18 +9,18 @@ const ACCENTS = {
 export default function StatCard({ label, value, icon: Icon, hint, accent = 'gold', className = '' }) {
   return (
     <div
-      className={`rounded-xl p-5 dark:bg-untold-surface light:bg-white border dark:border-white/5 light:border-gray-200 card-hover ${className}`}
+      className={`studio-card p-5 card-hover ${className}`}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-xs font-medium uppercase tracking-wider dark:text-untold-muted light:text-gray-500">
+          <p className="text-xs font-medium uppercase tracking-wider studio-muted">
             {label}
           </p>
-          <p className="mt-2 text-2xl sm:text-3xl font-bold dark:text-untold-gold light:text-untold-gold tabular-nums">
+          <p className="mt-2 text-2xl sm:text-3xl font-bold text-untold-gold tabular-nums">
             {value}
           </p>
           {hint && (
-            <p className="mt-1 text-[10px] dark:text-untold-muted light:text-gray-500">{hint}</p>
+            <p className="mt-1 text-[10px] studio-muted">{hint}</p>
           )}
         </div>
         {Icon && (

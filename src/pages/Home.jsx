@@ -27,7 +27,7 @@ export default function Home() {
       <HeroBanner content={hero} />
       <div className="ott-home-rows relative z-10 -mt-4 md:-mt-8">
         {HOME_FEATURED_ROWS.map((row) => (
-          <HomeRow key={`${row.type}-${row.vertical || row.category || row.title}`} row={row} />
+          <HomeRow key={`${row.type}-${row.vertical || row.category || row.titleKey}`} row={row} />
         ))}
       </div>
       <MembershipCTA />

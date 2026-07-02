@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import SEO from '../components/SEO';
 import SectionHeader from '../components/ui/SectionHeader';
 import ContentFilterBar from '../components/ui/ContentFilterBar';
@@ -7,11 +8,12 @@ import LiveScoreCard from '../components/live/LiveScoreCard';
 import LiveHighlights from '../components/live/LiveHighlights';
 import EventUpdateFeed from '../components/live/EventUpdateFeed';
 import BreakingNewsTicker from '../components/engagement/BreakingNewsTicker';
-import Loader from '../components/ui/Loader';
+import LiveSchedule from '../components/live/LiveSchedule';
 import liveApi from '../api/live';
 import { buildSportCounts, toSportOptions, getSportsFromItems } from '../utils/contentFilters';
 
 export default function Live() {
+  const { t } = useTranslation();
   const [sport, setSport] = useState('All');
   const [featured, setFeatured] = useState(null);
   const [matches, setMatches] = useState([]);
@@ -59,7 +61,7 @@ export default function Live() {
   if (error) {
     return (
       <div className="pt-32 pb-20 text-center px-4">
-        <h1 className="text-2xl font-bold dark:text-untold-white light:text-black">Live unavailable</h1>
+        <h1 className="text-2xl font-bold dark:text-untold-white light:text-black">{t('live.unavailable')}</h1>
         <p className="mt-2 text-sm dark:text-untold-muted light:text-gray-600">{error}</p>
       </div>
     );
@@ -68,8 +70,8 @@ export default function Live() {
   return (
     <>
       <SEO
-        title="Live"
-        description="UNTOLD Live — real-time scores, AI commentary, and match updates."
+        title={t('nav.live')}
+        description={t('live.subtitle')}
         path="/live"
       />
 
@@ -84,19 +86,20 @@ export default function Live() {
             Live Engine
           </div>
           <h1 className="font-display text-3xl sm:text-4xl font-bold dark:text-untold-white light:text-black">
-            UNTOLD Live
+            {t('live.title')}
           </h1>
           <p className="mt-2 text-sm sm:text-base dark:text-untold-muted light:text-gray-600 max-w-2xl">
-            Real-time scores, AI-generated commentary, and key moments — powered by Redis + WebSockets.
+            {t('live.subtitle')}
           </p>
         </div>
 
         <FeaturedLiveMatch match={featured} />
+        <LiveSchedule matches={[featured, ...matches].filter(Boolean)} />
       </section>
 
       <section className="py-10 sm:py-12">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <SectionHeader title="Live Matches" subtitle="Cricket, football, tennis & Formula 1" />
+          <SectionHeader title={t('live.matches')} subtitle={t('home.eventsSubtitle')} />
           <ContentFilterBar
             primary={{
               label: 'Sport',

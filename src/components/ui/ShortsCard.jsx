@@ -1,7 +1,12 @@
 import { Link } from 'react-router-dom';
 import { PlayIcon } from '../icons';
+import { useLocalizedContent } from '../../hooks/useLocalizedContent';
 
 export default function ShortsCard({ title, image, duration, views, to = '/shorts' }) {
+  const { localizeTitle, localizeViews } = useLocalizedContent();
+  const displayTitle = localizeTitle(title);
+  const displayViews = views ? localizeViews(views) : null;
+
   return (
     <Link
       to={to}
@@ -10,7 +15,7 @@ export default function ShortsCard({ title, image, duration, views, to = '/short
       <div className="relative aspect-[9/14] overflow-hidden rounded-xl dark:bg-untold-surface light:bg-gray-100">
         <img
           src={image}
-          alt={title}
+          alt={displayTitle}
           loading="lazy"
           className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
         />
@@ -27,10 +32,10 @@ export default function ShortsCard({ title, image, duration, views, to = '/short
         )}
       </div>
       <h3 className="mt-2 text-sm font-semibold line-clamp-2 dark:text-untold-white light:text-black group-hover:text-untold-gold transition-colors">
-        {title}
+        {displayTitle}
       </h3>
-      {views && (
-        <p className="text-xs dark:text-untold-muted light:text-gray-400 mt-0.5">{views} views</p>
+      {displayViews && (
+        <p className="text-xs dark:text-untold-muted light:text-gray-400 mt-0.5">{displayViews}</p>
       )}
     </Link>
   );

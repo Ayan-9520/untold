@@ -116,19 +116,56 @@ export const AI_LOCALIZATION_LANGUAGES = [
   { code: 'ar', label: 'Arabic', native: 'العربية', rtl: true },
 ];
 
-export const LANGUAGES = [
+/** Top Indian languages — shown in quick picker bar */
+export const FAMOUS_INDIAN_LANGUAGES = [
+  { code: 'hi', label: 'Hindi', native: 'हिन्दी' },
+  { code: 'en-IN', label: 'English', native: 'English' },
+  { code: 'ta', label: 'Tamil', native: 'தமிழ்' },
+  { code: 'te', label: 'Telugu', native: 'తెలుగు' },
+  { code: 'bn', label: 'Bengali', native: 'বাংলা' },
+  { code: 'mr', label: 'Marathi', native: 'मराठी' },
+];
+
+/** Indian languages — full site UI + INR pricing */
+export const INDIAN_LANGUAGES = [
+  ...FAMOUS_INDIAN_LANGUAGES,
+  { code: 'gu', label: 'Gujarati', native: 'ગુજરાતી' },
+  { code: 'kn', label: 'Kannada', native: 'ಕನ್ನಡ' },
+  { code: 'ml', label: 'Malayalam', native: 'മലയാളം' },
+  { code: 'pa', label: 'Punjabi', native: 'ਪੰਜਾਬੀ' },
+  { code: 'ur', label: 'Urdu', native: 'اردو', rtl: true },
+  { code: 'or', label: 'Odia', native: 'ଓଡ଼ିଆ' },
+];
+
+export const INTERNATIONAL_LANGUAGES = [
   { code: 'en', label: 'English', native: 'English' },
   { code: 'ru', label: 'Russian', native: 'Русский' },
   { code: 'es', label: 'Spanish', native: 'Español' },
   { code: 'eu', label: 'Europe', native: 'Europe' },
 ];
 
-/** Phase 1 — membership currency follows selected language only */
+export const LANGUAGES = [...INDIAN_LANGUAGES, ...INTERNATIONAL_LANGUAGES];
+
+const INDIAN_LANG_CODES = new Set(INDIAN_LANGUAGES.map((l) => l.code));
+
+/** Membership currency follows selected language */
 export const LANGUAGE_CURRENCY = {
   en: 'USD',
   ru: 'RUB',
   es: 'USD',
   eu: 'EUR',
+  hi: 'INR',
+  'en-IN': 'INR',
+  bn: 'INR',
+  ta: 'INR',
+  te: 'INR',
+  mr: 'INR',
+  gu: 'INR',
+  kn: 'INR',
+  ml: 'INR',
+  pa: 'INR',
+  ur: 'INR',
+  or: 'INR',
 };
 
 export const PAYMENTS_BY_LANGUAGE = {
@@ -136,9 +173,29 @@ export const PAYMENTS_BY_LANGUAGE = {
   ru: ['Stripe'],
   es: ['Stripe', 'PayPal'],
   eu: ['Stripe', 'PayPal'],
+  hi: ['UPI', 'Razorpay', 'Stripe'],
+  'en-IN': ['UPI', 'Razorpay', 'Stripe'],
+  bn: ['UPI', 'Razorpay', 'Stripe'],
+  ta: ['UPI', 'Razorpay', 'Stripe'],
+  te: ['UPI', 'Razorpay', 'Stripe'],
+  mr: ['UPI', 'Razorpay', 'Stripe'],
+  gu: ['UPI', 'Razorpay', 'Stripe'],
+  kn: ['UPI', 'Razorpay', 'Stripe'],
+  ml: ['UPI', 'Razorpay', 'Stripe'],
+  pa: ['UPI', 'Razorpay', 'Stripe'],
+  ur: ['UPI', 'Razorpay', 'Stripe'],
+  or: ['UPI', 'Razorpay', 'Stripe'],
 };
 
-export const PHASE1_LANGUAGES = ['en', 'ru', 'es', 'eu'];
+export const PHASE1_LANGUAGES = LANGUAGES.map((l) => l.code);
+
+export function isIndianLanguage(lang) {
+  return INDIAN_LANG_CODES.has(lang);
+}
+
+export function regionForLanguage(lang) {
+  return isIndianLanguage(lang) ? 'india' : null;
+}
 
 export function currencyForLanguage(lang) {
   return LANGUAGE_CURRENCY[lang] || LANGUAGE_CURRENCY.en;
