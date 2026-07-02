@@ -1,0 +1,17 @@
+{
+  "name": "untold-mobile",
+  "private": true,
+  "version": "1.0.0",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "studio": "npm run start --workspace=@untold/studio-mobile",
+    "originals": "npm run start --workspace=@untold/originals-mobile",
+    "studio:android": "npm run android --workspace=@untold/studio-mobile",
+    "originals:android": "npm run android --workspace=@untold/originals-mobile",
+    "studio:ios": "npm run ios --workspace=@untold/studio-mobile",
+    "originals:ios": "npm run ios --workspace=@untold/originals-mobile"
+  }
+}

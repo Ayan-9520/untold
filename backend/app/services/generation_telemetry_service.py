@@ -5,6 +5,9 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any
 
+from sqlalchemy.orm import Session
+
+from app.domain.ai.cost_intelligence import build_cost_telemetry
 from app.domain.ai.telemetry import estimate_cost_usd, estimate_tokens, resolve_model
 from app.models.studio_platform import AIGeneration
 
@@ -68,20 +71,62 @@ def apply_success(
     completed_at = gen.completed_at or datetime.now(timezone.utc)
     prompt = gen.prompt or ""
     output = output_text if output_text is not None else (gen.output_text or "")
+    module = gen.module.value if hasattr(gen.module, "value") else str(gen.module)
 
-    input_tokens = int(meta.get("input_tokens") or gen.input_tokens or estimate_tokens(prompt))
-    output_tokens = int(meta.get("output_tokens") or gen.output_tokens or estimate_tokens(output))
-    resolved_model = model or meta.get("model") or gen.model or resolve_model(gen.provider, meta)
+    enriched = build_cost_telemetry(
+        module,
+        prompt,
+        output,
+        meta,
+        gen.parameters,
+        provider=gen.provider,
+        model=model or meta.get("model") or gen.model,
+    )
+    telemetry = enriched.get("telemetry", enriched)
+
+    input_tokens = int(telemetry.get("input_tokens") or gen.input_tokens or estimate_tokens(prompt))
+    output_tokens = int(telemetry.get("output_tokens") or gen.output_tokens or estimate_tokens(output))
+    resolved_model = model or telemetry.get("model") or gen.model or resolve_model(gen.provider, enriched)
 
     gen.model = resolved_model
     gen.input_tokens = input_tokens
     gen.output_tokens = output_tokens
-    gen.latency_ms = int(meta.get("latency_ms") or gen.latency_ms or latency_ms(started_at, completed_at) or 0)
-    gen.cost_usd = float(meta.get("cost_usd") or gen.cost_usd or estimate_cost_usd(input_tokens, output_tokens, resolved_model))
+    gen.latency_ms = int(enriched.get("latency_ms") or gen.latency_ms or latency_ms(started_at, completed_at) or 0)
+    gen.cost_usd = float(
+        telemetry.get("cost_usd")
+        or telemetry.get("estimated_cost_usd")
+        or gen.cost_usd
+        or estimate_cost_usd(input_tokens, output_tokens, resolved_model)
+    )
+    gen.output_meta = {**(gen.output_meta or {}), **{k: v for k, v in enriched.items() if k != "telemetry"}}
     if gen.temperature is None:
         gen.temperature = extract_temperature(gen.parameters)
     if not gen.prompt_version:
         gen.prompt_version = extract_prompt_version(gen.parameters)
+
+
+def finalize_generation_success(
+    db: Session,
+    gen: AIGeneration,
+    *,
+    started_at: datetime | None,
+    output_text: str | None = None,
+    meta: dict | None = None,
+    model: str | None = None,
+) -> None:
+    """Apply telemetry, record cost event, sync billing meters, evaluate budget alerts."""
+    apply_success(gen, started_at=started_at, output_text=output_text, meta=meta, model=model)
+
+    enriched = gen.output_meta or {}
+    telemetry = enriched.get("telemetry") or enriched
+
+    from app.ai.runtime.cost_tracking import record_generation_cost
+    from app.services.ai_cost_intelligence_service import AICostIntelligenceService
+    from app.services.ai_cost_service import AICostService
+
+    AICostIntelligenceService.record_event(db, gen, telemetry)
+    record_generation_cost(db, gen.id, {"telemetry": telemetry, **enriched})
+    AICostService.evaluate_budget_alerts(db, gen)
 
 
 def apply_failure(gen: AIGeneration, *, started_at: datetime | None = None) -> None:
@@ -109,11 +154,14 @@ def telemetry_dict(gen: AIGeneration) -> dict[str, Any]:
 
     status_val = gen.status.value if hasattr(gen.status, "value") else str(gen.status)
     failures = gen.failure_count or (1 if status_val == "failed" else 0)
+    telemetry = meta.get("telemetry") or {}
 
     return {
         "model": model,
+        "modality": telemetry.get("modality"),
         "input_tokens": input_tokens,
         "output_tokens": output_tokens,
+        "units": telemetry.get("units"),
         "latency_ms": lat,
         "cost_usd": float(cost) if cost is not None else None,
         "failure_count": failures,

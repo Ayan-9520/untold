@@ -1,18 +1,46 @@
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import SEO from '../components/SEO';
+import { api } from '../api/client';
 
-const sports = [
-  { slug: 'cricket', name: 'Cricket', image: 'https://images.unsplash.com/photo-1531415074968-076ba3e9f2e4?w=600&q=80' },
-  { slug: 'football', name: 'Football', image: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=600&q=80' },
-  { slug: 'basketball', name: 'Basketball', image: 'https://images.unsplash.com/photo-1546519638-68e109498ffc?w=600&q=80' },
-  { slug: 'tennis', name: 'Tennis', image: 'https://images.unsplash.com/photo-1554068865-24cecd4e24b8?w=600&q=80' },
-  { slug: 'boxing', name: 'Boxing', image: 'https://images.unsplash.com/photo-1549719386-74dfcbf7dbed?w=600&q=80' },
-  { slug: 'hockey', name: 'Hockey', image: 'https://images.unsplash.com/photo-1560272564-c83b66b1ad12?w=600&q=80' },
-  { slug: 'formula-1', name: 'Formula 1', image: 'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=600&q=80' },
-  { slug: 'olympics', name: 'Olympics', image: 'https://images.unsplash.com/photo-1461896836934-ffe607ba7a38?w=600&q=80' },
+const FALLBACK_SPORTS = [
+  { slug: 'cricket', name: 'Cricket' },
+  { slug: 'football', name: 'Football' },
+  { slug: 'basketball', name: 'Basketball' },
+  { slug: 'tennis', name: 'Tennis' },
+  { slug: 'boxing', name: 'Boxing' },
+  { slug: 'hockey', name: 'Hockey' },
+  { slug: 'formula-1', name: 'Formula 1' },
+  { slug: 'olympics', name: 'Olympics' },
 ];
 
 export default function Hub() {
+  const [sports, setSports] = useState(FALLBACK_SPORTS);
+  const [images, setImages] = useState({});
+
+  useEffect(() => {
+    api.categories.list()
+      .then((cats) => {
+        if (cats?.length) {
+          setSports(cats.map((c) => ({ slug: c.slug, name: c.name })));
+        }
+      })
+      .catch(() => setSports(FALLBACK_SPORTS));
+  }, []);
+
+  useEffect(() => {
+    api.videos.list({ page_size: 20 })
+      .then(({ items }) => {
+        const map = {};
+        items.forEach((v) => {
+          const key = v.category?.slug || v.category?.name?.toLowerCase();
+          if (key && v.image_url && !map[key]) map[key] = v.image_url;
+        });
+        setImages(map);
+      })
+      .catch(() => {});
+  }, []);
+
   return (
     <>
       <SEO
@@ -39,11 +67,11 @@ export default function Hub() {
             {sports.map((sport) => (
               <Link
                 key={sport.slug}
-                to={`/originals`}
+                to={`/explore?sport=${encodeURIComponent(sport.name)}`}
                 className="group relative aspect-[4/3] overflow-hidden rounded-xl card-hover"
               >
                 <img
-                  src={sport.image}
+                  src={images[sport.slug] || images[sport.name?.toLowerCase()] || `https://images.unsplash.com/photo-1461896836934-ffe607ba7a38?w=600&q=80`}
                   alt={sport.name}
                   className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                 />

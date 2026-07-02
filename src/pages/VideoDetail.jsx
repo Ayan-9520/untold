@@ -5,59 +5,85 @@ import Button from '../components/ui/Button';
 import VideoCard from '../components/ui/VideoCard';
 import VideoPlayer from '../components/player/VideoPlayer';
 import { PlayIcon, BookmarkIcon, ShareIcon } from '../components/icons';
-import { getVideoById, videoCatalog } from '../data/videoCatalog';
-import { getDocumentaryExtras } from '../data/documentaryExtras';
+import { getDocumentaryExtras } from '../utils/documentaryExtras';
 import { useWatchlist } from '../context/WatchlistContext';
 import { useEngagement } from '../context/EngagementContext';
 import { useWebAuth } from '../context/WebAuthContext';
-import client from '../api/client';
+import { api } from '../api/client';
+import { mapVideo } from '../api/content';
 
 export default function VideoDetail() {
   const { id } = useParams();
   const [searchParams] = useSearchParams();
   const [video, setVideo] = useState(null);
+  const [error, setError] = useState(null);
   const [showPlayer, setShowPlayer] = useState(searchParams.get('trailer') === '1');
   const [apiVideoId, setApiVideoId] = useState(null);
+  const [related, setRelated] = useState([]);
   const { isInWatchlist, toggleWatchlist } = useWatchlist();
   const { recordWatch } = useEngagement();
   const { user } = useWebAuth();
 
   useEffect(() => {
-    const mock = getVideoById(id);
-    setVideo(mock);
-
     const numericId = Number(id);
-    if (!Number.isNaN(numericId)) {
-      client.get(`/videos/${numericId}`).then(({ data }) => {
-        setApiVideoId(data.id);
-        setVideo((prev) => ({
-          ...prev,
-          ...mock,
-          title: data.title || mock?.title,
-          description: data.description || mock?.description,
-          accessTier: data.access_tier,
-        }));
-      }).catch(() => {});
+    if (Number.isNaN(numericId)) {
+      setError('Invalid video id');
+      return;
     }
+    setError(null);
+    api.videos.get(numericId)
+      .then((data) => {
+        const mapped = mapVideo(data);
+        setApiVideoId(data.id);
+        setVideo({
+          ...mapped,
+          slug: mapped.slug || String(data.id),
+          image: mapped.image,
+          thumbnail: mapped.image,
+          trailerUrl: mapped.videoUrl,
+          accessTier: data.access_tier,
+          category: data.category?.name || mapped.category,
+          categorySlug: mapped.categorySlug || data.category?.slug || '',
+          sport: data.category?.name || mapped.category,
+        });
+      })
+      .catch((err) => {
+        setVideo(null);
+        setError(err.message || 'Video not found');
+      });
   }, [id]);
 
   useEffect(() => {
     if (video) recordWatch(video, 0.12);
   }, [video, recordWatch]);
 
-  if (!video) {
+  useEffect(() => {
+    if (!video?.categorySlug && !video?.category) return;
+    const cat = video.categorySlug || String(video.category).toLowerCase();
+    api.videos.list({ category: cat, page_size: 8 })
+      .then(({ items }) => {
+        setRelated(
+          items
+            .map(mapVideo)
+            .filter((v) => v.id !== video.id)
+            .slice(0, 3)
+        );
+      })
+      .catch(() => setRelated([]));
+  }, [video]);
+
+  if (error || !video) {
     return (
       <div className="pt-32 pb-20 text-center px-4">
-        <h1 className="text-2xl font-bold dark:text-untold-white light:text-black">Documentary not found</h1>
+        <h1 className="text-2xl font-bold dark:text-untold-white light:text-black">
+          {error || 'Documentary not found'}
+        </h1>
         <Link to="/explore" className="mt-4 inline-block text-untold-gold">Back to Explore</Link>
       </div>
     );
   }
 
   const extras = getDocumentaryExtras(video);
-  const related = videoCatalog
-    .filter((v) => v.id !== video.id && (v.vertical === video.vertical || v.sport === video.sport || v.category === video.category))
-    .slice(0, 6);
   const inList = isInWatchlist(video.id);
   const numericId = Number(id);
   const playVideoId = apiVideoId || (!Number.isNaN(numericId) ? numericId : null);

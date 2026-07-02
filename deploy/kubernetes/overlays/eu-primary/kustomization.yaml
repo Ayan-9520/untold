@@ -1,0 +1,29 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: untold
+resources:
+  - ../../
+  - ../../global/pdb.yaml
+  - ../../global/worker-hpa.yaml
+
+commonLabels:
+  untold.io/region: eu-west-1
+  untold.io/role: primary
+
+patches:
+  - path: patches/configmap-patch.yaml
+  - path: patches/ingress-patch.yaml
+  - target:
+      kind: Deployment
+      name: untold-api
+    patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 3
+  - target:
+      kind: Deployment
+      name: untold-celery-beat
+    patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 1

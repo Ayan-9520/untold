@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
-from app.core.exceptions import NotFoundError
+from app.core.exceptions import ForbiddenError, NotFoundError
 from app.domain.studio.enums import ASSET_FOLDERS, AssetType
 from app.domain.storage.local import LocalStorageProvider
 from app.domain.storage.registry import get_storage_registry, resolve_storage_provider, upload_bytes
@@ -115,6 +115,26 @@ class AssetLibraryService:
             "collections_count": collections,
             "storage_providers": providers,
         }
+
+    @staticmethod
+    def assert_file_access(db: Session, user: User, file_path: str) -> None:
+        """Ensure the studio user may download a local storage object by key."""
+        StudioPlatformService.require_permission(db, user, None, "asset.read")
+        normalized = file_path.replace("\\", "/").lstrip("/")
+        asset = (
+            db.query(StudioAsset)
+            .filter(
+                StudioAsset.is_deleted.is_(False),
+                or_(StudioAsset.r2_key == normalized, StudioAsset.url.endswith(normalized)),
+            )
+            .first()
+        )
+        if not asset:
+            raise NotFoundError("Asset file")
+        if asset.project_id:
+            StudioPlatformService.require_permission(db, user, asset.project_id, "asset.read")
+        elif asset.uploaded_by_id != user.id and not user.is_admin:
+            raise ForbiddenError("Asset access denied")
 
     @staticmethod
     def list_assets(

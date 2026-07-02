@@ -11,13 +11,21 @@ Official documentation for the UNTOLD global sports storytelling platform — co
 | [OpenAPI](./openapi.md) | Integrators | Swagger/ReDoc, export, gateway spec |
 | [Database](./database.md) | Backend, DBA | Schema domains, migrations, conventions |
 | [AI](./ai.md) | Studio, ML engineers | Provider layer, capabilities, cost tracking |
+| [**AI Cost Intelligence**](./ai-cost-intelligence.md) | Platform, finance | Spend tracking, budgets, routing, predictions |
 | [Authentication](./authentication.md) | Security, backend | JWT, sessions, RBAC, enterprise auth |
 | [Deployment](./deployment.md) | DevOps, SRE | Environments, CI/CD, K8s, compose |
+| [**Global Deployment**](./global-deployment.md) | DevOps, SRE | Cloudflare, multi-region, DR, observability |
 | [Developer Guide](./developer-guide.md) | All engineers | Local setup, conventions, testing |
 | [Admin Guide](./admin-guide.md) | Studio operators | UNTOLD Studio workflows and roles |
 | [Folder Structure](./folder-structure.md) | New contributors | Repository layout reference |
 | [Production Ready](./production-ready.md) | Release managers | Readiness gates and operational maturity |
-| [**CTO Final Audit**](./cto-final-audit-report.md) | Leadership | Before/after scores & launch recommendation |
+| [**Multi-Tenant SaaS**](./multi-tenant-saas.md) | Platform | Organizations, workspaces, tenant isolation |
+| [**Enterprise Billing**](./enterprise-billing.md) | Platform, finance | Stripe/Razorpay, subscriptions, usage meters |
+| [**Enterprise Workflow Automation**](./enterprise-workflow-automation.md) | Studio, ops | Visual builder, triggers, scheduling, approvals |
+| [**Enterprise AI Agent Platform**](./enterprise-agent-platform.md) | Studio, platform | Registry, SDK, memory, scheduling, monitoring |
+| [**Business Intelligence**](./business-intelligence.md) | Leadership, finance | Executive dashboards, reports, scheduled export |
+| [**Enterprise Plugin Marketplace**](./enterprise-plugin-marketplace.md) | Studio, developers | SDK, hooks, events, ratings, versioning |
+| [**Enterprise Compliance**](./enterprise-compliance.md) | Security, legal | GDPR, SOC2, ISO27001, consent, retention |
 
 ## Operations
 

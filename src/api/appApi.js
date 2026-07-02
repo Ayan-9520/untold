@@ -1,7 +1,4 @@
 import { api } from './client';
-import { notifications as mockNotifications } from '../data/mockNotifications';
-
-const delay = (ms = 300) => new Promise((r) => setTimeout(r, ms));
 
 export const authApi = {
   async login({ email, password }) {
@@ -21,6 +18,14 @@ export const authApi = {
     const user = await api.auth.me();
     return { data: user };
   },
+
+  async loginGoogle(idToken) {
+    const tokens = await api.auth.google(idToken);
+    localStorage.setItem('untold-token', tokens.access_token);
+    localStorage.setItem('untold-refresh', tokens.refresh_token);
+    const user = await api.auth.me();
+    return { data: { user, token: tokens.access_token } };
+  },
 };
 
 export const appApi = {
@@ -38,13 +43,28 @@ export const appApi = {
   },
 
   async getNotifications() {
-    await delay(200);
-    return { data: mockNotifications };
+    const sub = await api.subscriptions.me();
+    const items = [];
+    if (sub?.status === 'active') {
+      items.push({
+        id: 'sub-active',
+        title: 'Subscription active',
+        body: `Your ${sub.plan} plan is active.`,
+        read: false,
+        created_at: sub.started_at || new Date().toISOString(),
+      });
+    }
+    return { data: items };
   },
 
   async submitContact(formData) {
-    await delay(500);
-    return { data: { success: true, message: "Thank you for reaching out." } };
+    const res = await api.contact.submit({
+      name: formData.name,
+      email: formData.email,
+      subject: formData.subject,
+      message: formData.message,
+    });
+    return { data: { success: true, message: res.message } };
   },
 };
 

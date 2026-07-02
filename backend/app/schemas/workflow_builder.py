@@ -49,7 +49,7 @@ class WorkflowExecuteRequest(BaseModel):
 
 
 class WorkflowTriggerCreate(BaseModel):
-    trigger_type: str = Field(pattern="^(manual|api|webhook|cron)$")
+    trigger_type: str = Field(pattern="^(manual|api|webhook|cron|email|event)$")
     name: str = Field(min_length=1, max_length=200)
     version_id: int | None = None
     enabled: bool = True
@@ -101,12 +101,35 @@ class WorkflowTriggerResponse(BaseModel):
     enabled: bool
     config: dict[str, Any]
     webhook_secret: str | None = None
+    webhook_url: str | None = None
+    api_key: str | None = None
+    api_key_prefix: str | None = None
+    email_token: str | None = None
+    email_url: str | None = None
     cron_expression: str | None
     next_run_at: datetime | None
     last_run_at: datetime | None
     created_at: datetime | None
 
     model_config = {"from_attributes": True}
+
+
+class WorkflowExecutionLogResponse(BaseModel):
+    id: int
+    run_id: int
+    node_id: str | None
+    level: str
+    stage: str | None
+    message: str
+    meta: dict[str, Any]
+    created_at: datetime | None
+
+    model_config = {"from_attributes": True}
+
+
+class WorkflowExecutionLogsPage(BaseModel):
+    items: list[WorkflowExecutionLogResponse]
+    total: int
 
 
 class WorkflowNodeCatalogResponse(BaseModel):

@@ -22,6 +22,7 @@ from app.models.studio_platform import (
     StudioNotification,
 )
 from app.schemas.voice_studio import VoiceGenerateCreate, VoicePreviewCreate, VoiceTranslateCreate
+from app.services.generation_telemetry_service import finalize_generation_success
 from app.services.studio_platform_service import StudioPlatformService
 
 _VOICE_MODULE = AIGenerationModule.VOICE
@@ -301,6 +302,10 @@ class VoiceStudioService:
 
             VoiceStudioService._save_version(
                 db, gen.id, gen.created_by_id, result.result_url, result.r2_key, meta, label="v1",
+            )
+
+            finalize_generation_success(
+                db, gen, started_at=gen.started_at, output_text=result.output_text, meta=meta,
             )
 
             if gen.created_by_id:

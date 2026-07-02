@@ -22,6 +22,7 @@ CONTROL_NODE_TYPES: tuple[str, ...] = (
     "loop",
     "parallel",
     "delay",
+    "notification",
 )
 
 ALL_NODE_TYPES: tuple[str, ...] = AGENT_NODE_TYPES + CONTROL_NODE_TYPES
@@ -43,6 +44,7 @@ NODE_CATALOG: list[dict] = [
     {"type": "loop", "label": "Loop", "category": "control", "icon": "🔁", "default_timeout": None, "default_retries": 0},
     {"type": "parallel", "label": "Parallel", "category": "control", "icon": "⚡", "default_timeout": None, "default_retries": 0},
     {"type": "delay", "label": "Delay / Schedule", "category": "control", "icon": "⏱️", "default_timeout": None, "default_retries": 0},
+    {"type": "notification", "label": "Notification", "category": "control", "icon": "🔔", "default_timeout": 30, "default_retries": 0},
 ]
 
 AGENT_TO_ENGINE_STEP: dict[str, str] = {

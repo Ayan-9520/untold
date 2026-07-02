@@ -38,9 +38,39 @@ PLANS = [
 ]
 
 MAGAZINES = [
-    ("issue-q1-2026", "UNTOLD Q1 2026", "Q1", 2026, AccessTier.FREE, None),
-    ("issue-q2-2026", "UNTOLD Q2 2026", "Q2", 2026, AccessTier.PREMIUM, '{"INR": 99, "USD": 2.99}'),
-    ("issue-exclusive-2026", "UNTOLD Exclusive Edition", "Special", 2026, AccessTier.VIP, None),
+    {
+        "slug": "issue-q1-2026",
+        "title": "UNTOLD Q1 2026",
+        "quarter": "Q1",
+        "year": 2026,
+        "tier": AccessTier.FREE,
+        "prices": None,
+        "cover": "https://images.unsplash.com/photo-1531415074968-076ba3e9f2e4?w=1200&q=80",
+    },
+    {
+        "slug": "issue-q2-2026",
+        "title": "UNTOLD Q2 2026",
+        "quarter": "Q2",
+        "year": 2026,
+        "tier": AccessTier.PREMIUM,
+        "prices": {"INR": 99, "USD": 2.99},
+        "cover": "https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=1200&q=80",
+    },
+    {
+        "slug": "issue-exclusive-2026",
+        "title": "UNTOLD Exclusive Edition",
+        "quarter": "Special",
+        "year": 2026,
+        "tier": AccessTier.VIP,
+        "prices": None,
+        "cover": "https://images.unsplash.com/photo-1461896836934-ffe607ba7a38?w=1200&q=80",
+    },
+]
+
+DEFAULT_SECTIONS = [
+    {"id": "cover", "title": "Editor's Letter", "body": "Welcome to UNTOLD — the story behind the glory.", "excerpt": "Editor's letter"},
+    {"id": "feature", "title": "Cover Story", "body": "In-depth storytelling on the season's defining moments.", "excerpt": "Cover feature"},
+    {"id": "analytics", "title": "Analytics Desk", "body": "Performance data, trends, and fan intelligence.", "excerpt": "Analytics"},
 ]
 
 
@@ -61,16 +91,19 @@ def seed_monetization_data(db: Session) -> None:
             )
         )
 
-    for slug, title, quarter, year, tier, prices in MAGAZINES:
+    for m in MAGAZINES:
         db.add(
             MagazineEdition(
-                issue_slug=slug,
-                title=title,
-                quarter=quarter,
-                year=year,
-                access_tier=tier,
-                prices_json=prices,
-                pdf_storage_key=f"magazines/{slug}.pdf",
+                issue_slug=m["slug"],
+                title=m["title"],
+                quarter=m["quarter"],
+                year=m["year"],
+                access_tier=m["tier"],
+                prices_json=json.dumps(m["prices"]) if m["prices"] else None,
+                pdf_storage_key=f"magazines/{m['slug']}.pdf",
+                cover_image_url=m["cover"],
+                content_json=json.dumps(DEFAULT_SECTIONS),
+                page_count=48,
             )
         )
 

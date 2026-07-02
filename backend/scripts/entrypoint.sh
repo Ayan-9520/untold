@@ -1,6 +1,9 @@
 #!/bin/sh
 set -e
 
+echo "Validating environment..."
+python -c "from app.core.config import get_settings; get_settings()"
+
 # Only the API service runs migrations (avoids race when celery starts in parallel)
 if [ "$RUN_MIGRATIONS" = "true" ]; then
   echo "Running database migrations..."

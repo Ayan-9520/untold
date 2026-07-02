@@ -12,6 +12,7 @@ from strawberry.types import Info
 from app.core.exceptions import UnauthorizedError
 from app.db.session import SessionLocal
 from app.domain.gateway.auth import GatewayAuth, resolve_gateway_auth
+from app.gateway.sandbox import SANDBOX_PROJECTS, SANDBOX_VIDEOS
 from app.schemas.video import VideoListParams
 from app.services.studio_service import StudioService
 from app.services.video_service import VideoService
@@ -61,6 +62,32 @@ def _db(info: Info) -> Session:
     return info.context["db"]
 
 
+def _is_sandbox(info: Info) -> bool:
+    return bool(info.context.get("sandbox"))
+
+
+def _sandbox_videos(search: Optional[str], page: int, page_size: int) -> VideoConnection:
+    rows = SANDBOX_VIDEOS
+    if search:
+        term = search.lower()
+        rows = [v for v in rows if term in v["title"].lower() or term in (v.get("description") or "").lower()]
+    total = len(rows)
+    page_rows = rows[(page - 1) * page_size : page * page_size]
+    items = [
+        GatewayVideo(
+            id=v["id"],
+            title=v["title"],
+            slug=v["slug"],
+            description=v.get("description"),
+            image_url=v.get("image_url"),
+            video_type=v.get("video_type", "documentary"),
+            views_count=v.get("views_count", 0),
+        )
+        for v in page_rows
+    ]
+    return VideoConnection(items=items, total=total)
+
+
 @strawberry.type
 class Query:
     @strawberry.field
@@ -78,6 +105,8 @@ class Query:
         auth = _auth(info)
         auth.require_scope("graphql.query")
         auth.require_scope("videos.read")
+        if _is_sandbox(info):
+            return _sandbox_videos(search, page, page_size)
         db = _db(info)
         params = VideoListParams(page=page, page_size=page_size, search=search)
         rows, total = VideoService.list_videos(db, params)
@@ -100,8 +129,21 @@ class Query:
         auth = _auth(info)
         auth.require_scope("graphql.query")
         auth.require_scope("videos.read")
+        if _is_sandbox(info):
+            for v in SANDBOX_VIDEOS:
+                if v["id"] == id:
+                    return GatewayVideo(
+                        id=v["id"],
+                        title=v["title"],
+                        slug=v["slug"],
+                        description=v.get("description"),
+                        image_url=v.get("image_url"),
+                        video_type=v.get("video_type", "documentary"),
+                        views_count=v.get("views_count", 0),
+                    )
+            return None
         db = _db(info)
-        v = VideoService.get_by_id(db, id)
+        v = VideoService.get_by_id(db, id, increment_views=False)
         return GatewayVideo(
             id=v.id,
             title=v.title,
@@ -117,6 +159,12 @@ class Query:
         auth = _auth(info)
         auth.require_scope("graphql.query")
         auth.require_scope("projects.read")
+        if _is_sandbox(info):
+            rows = SANDBOX_PROJECTS[:limit]
+            return [
+                GatewayProject(id=p["id"], title=p["title"], stage=p["stage"], description=p.get("description"))
+                for p in rows
+            ]
         db = _db(info)
         rows, _ = StudioService.list_productions(db, limit=limit)
         return [GatewayProject(id=p.id, title=p.title, stage=p.stage, description=p.description) for p in rows]
@@ -127,10 +175,11 @@ schema = strawberry.Schema(query=Query)
 
 async def graphql_context_getter(request):
     db = SessionLocal()
+    is_sandbox = "/gateway/sandbox" in request.url.path
     try:
         auth = resolve_gateway_auth(request, db)
         auth.require_scope("graphql.query")
-        return {"request": request, "gateway_auth": auth, "db": db}
+        return {"request": request, "gateway_auth": auth, "db": db, "sandbox": is_sandbox}
     except Exception:
         db.close()
         raise

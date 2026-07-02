@@ -11,11 +11,11 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { login, isAuthenticated, isAdmin, loading: authLoading } = useAdminAuth();
+  const { login, isAuthenticated, hasStudioAccess, loading: authLoading } = useAdminAuth();
   const { isDark, toggleTheme } = useTheme();
   const navigate = useNavigate();
 
-  if (!authLoading && isAuthenticated && isAdmin) {
+  if (!authLoading && isAuthenticated && hasStudioAccess) {
     return <Navigate to={studioPath()} replace />;
   }
 

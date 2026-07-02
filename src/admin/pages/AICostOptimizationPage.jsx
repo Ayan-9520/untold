@@ -6,13 +6,14 @@ import { studioPlatform } from '../api/adminApi';
 
 const costKey = ['ai-cost'];
 
-const TABS = ['overview', 'budgets', 'policies', 'alerts', 'reports'];
+const TABS = ['overview', 'budgets', 'policies', 'alerts', 'reports', 'intelligence'];
 const TAB_LABELS = {
   overview: 'Overview',
   budgets: 'Budgets',
   policies: 'Model Policies',
   alerts: 'Alerts',
   reports: 'Monthly Reports',
+  intelligence: 'Intelligence',
 };
 
 function StatCard({ label, value, sub, tone }) {
@@ -65,6 +66,7 @@ function BudgetsPanel({ budgets, onCreate }) {
           <input className="studio-input" placeholder="Budget name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
           <select className="studio-input" value={form.scope_type} onChange={(e) => setForm({ ...form, scope_type: e.target.value })}>
             <option value="global">Global</option>
+            <option value="organization">Per organization</option>
             <option value="user">Per user</option>
             <option value="project">Per project</option>
           </select>
@@ -190,6 +192,12 @@ export default function AICostOptimizationPage() {
     queryFn: () => studioPlatform.getAICostDashboard(),
   });
 
+  const { data: intelligence } = useQuery({
+    queryKey: [...costKey, 'intelligence'],
+    queryFn: () => studioPlatform.getAICostIntelligence(),
+    enabled: tab === 'overview' || tab === 'intelligence',
+  });
+
   const { data: budgets } = useQuery({
     queryKey: [...costKey, 'budgets'],
     queryFn: () => studioPlatform.listAICostBudgets(),
@@ -247,8 +255,8 @@ export default function AICostOptimizationPage() {
   return (
     <div className="studio-page">
       <StudioPageHeader
-        title="AI Cost Optimization"
-        description="Token usage, cost tracking, automatic model selection, caching, budgets, alerts, and monthly reports"
+        title="AI Cost Intelligence"
+        description="Provider & model costs, tokens, images, video, voice, music, translation — budgets, alerts, predictions, routing, and reports"
         actions={
           <button type="button" className="studio-btn studio-btn--secondary text-sm" onClick={() => generateReport.mutate()}>
             Generate report
@@ -290,7 +298,45 @@ export default function AICostOptimizationPage() {
                 <BreakdownChart title="Cost per project" data={dashboard?.by_project?.map((d) => ({ ...d, label: d.label || d.key }))} />
                 <BreakdownChart title="Cost per model" data={dashboard?.by_model?.map((d) => ({ ...d, label: d.key }))} />
                 <BreakdownChart title="Cost per provider" data={dashboard?.by_provider?.map((d) => ({ ...d, label: d.key }))} />
-                <BreakdownChart title="Cost per user" data={dashboard?.by_user?.map((d) => ({ ...d, label: d.label || d.key }))} />
+                <BreakdownChart title="Cost per module" data={(intelligence?.by_module || dashboard?.by_module)?.map((d) => ({ ...d, label: d.label || d.key }))} />
+              </div>
+              {intelligence?.prediction && (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <StatCard label="Projected month" value={`$${intelligence.prediction.projected_month_usd?.toFixed(2)}`} tone="gold" />
+                  <StatCard label="Daily burn" value={`$${intelligence.prediction.daily_burn_usd?.toFixed(2)}`} />
+                  <StatCard label="Remaining (est.)" value={`$${intelligence.prediction.projected_remaining_usd?.toFixed(2)}`} />
+                  <StatCard label="Projected requests" value={intelligence.prediction.projected_requests ?? 0} />
+                </div>
+              )}
+            </div>
+          )}
+
+          {tab === 'intelligence' && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {(intelligence?.by_modality || []).map((m) => (
+                  <StatCard key={m.modality} label={m.modality} value={`$${m.cost_usd?.toFixed(2)}`} sub={`${m.request_count} requests`} />
+                ))}
+              </div>
+              {intelligence?.unit_totals && Object.keys(intelligence.unit_totals).length > 0 && (
+                <div className="studio-card p-4">
+                  <h3 className="text-sm font-semibold mb-3">Usage units</h3>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+                    {Object.entries(intelligence.unit_totals).map(([k, v]) => (
+                      <div key={k}><span className="dark:text-untold-muted">{k}:</span> {Number(v).toLocaleString()}</div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <div className="studio-card p-4 space-y-3">
+                <h3 className="text-sm font-semibold">Optimization recommendations</h3>
+                {(intelligence?.optimizations || []).map((tip, i) => (
+                  <div key={i} className="py-2 border-b dark:border-white/5 last:border-0">
+                    <p className="text-sm font-medium">{tip.title}</p>
+                    <p className="text-xs dark:text-untold-muted mt-1">{tip.detail}</p>
+                    <p className="text-[10px] text-untold-gold mt-1">{tip.action}</p>
+                  </div>
+                ))}
               </div>
             </div>
           )}

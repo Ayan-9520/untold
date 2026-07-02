@@ -1,10 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import SectionHeader from '../ui/SectionHeader';
 import Badge from '../ui/Badge';
 import SectionReveal from '../ui/SectionReveal';
 import { communityApi } from '../../api/community';
-import { FAN_WARS } from '../../data/fanCatalog';
 
 function ShareButton({ title }) {
   const handleShare = async () => {
@@ -27,8 +26,14 @@ function ShareButton({ title }) {
   );
 }
 
-export default function FanWarsRow({ wars: initialWars = FAN_WARS }) {
-  const [wars, setWars] = useState(initialWars.slice(0, 3));
+export default function FanWarsRow() {
+  const [wars, setWars] = useState([]);
+
+  useEffect(() => {
+    communityApi.getFanWars()
+      .then((items) => setWars(items.slice(0, 3)))
+      .catch(() => setWars([]));
+  }, []);
 
   const handleVote = async (warId, side) => {
     await communityApi.voteFanWar(warId, side);
@@ -41,6 +46,8 @@ export default function FanWarsRow({ wars: initialWars = FAN_WARS }) {
     );
   };
 
+  if (wars.length === 0) return null;
+
   return (
     <SectionReveal className="py-12 sm:py-16 dark:bg-untold-surface/30 light:bg-gray-50/50" aria-labelledby="fan-wars">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -48,7 +55,7 @@ export default function FanWarsRow({ wars: initialWars = FAN_WARS }) {
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
           {wars.map((war) => {
             const total = war.teamA.votes + war.teamB.votes;
-            const pctA = Math.round((war.teamA.votes / total) * 100);
+            const pctA = total > 0 ? Math.round((war.teamA.votes / total) * 100) : 50;
             const pctB = 100 - pctA;
             return (
               <article

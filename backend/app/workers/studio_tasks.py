@@ -51,6 +51,41 @@ def run_production_pipeline(self, run_id: int) -> dict:
         db.close()
 
 
+@celery_app.task(name="untold.aggregate_bi_daily_snapshots")
+def aggregate_bi_daily_snapshots() -> dict:
+    db = SessionLocal()
+    try:
+        from app.services.bi_aggregation_service import BIAggregationService
+
+        return BIAggregationService.aggregate_daily(db)
+    finally:
+        db.close()
+
+
+@celery_app.task(name="untold.process_scheduled_bi_reports")
+def process_scheduled_bi_reports() -> dict:
+    db = SessionLocal()
+    try:
+        from app.services.bi_report_service import BIReportService
+
+        fired = BIReportService.process_due_schedules(db)
+        return {"fired": fired}
+    finally:
+        db.close()
+
+
+@celery_app.task(name="untold.process_agent_schedules")
+def process_agent_schedules() -> dict:
+    db = SessionLocal()
+    try:
+        from app.services.agent_scheduler_service import AgentSchedulerService
+
+        fired = AgentSchedulerService.process_due_schedules(db)
+        return {"fired": fired}
+    finally:
+        db.close()
+
+
 @celery_app.task(name="untold.process_workflow_cron_triggers")
 def process_workflow_cron_triggers() -> dict:
     db = SessionLocal()

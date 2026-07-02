@@ -44,8 +44,12 @@ class StudioApiKey(Base):
     scopes: Mapped[list] = mapped_column(JSONB, default=list, nullable=False)
     expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     total_requests: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    environment: Mapped[str] = mapped_column(String(16), default="production", nullable=False)
     last_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_by_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    organization_id: Mapped[int | None] = mapped_column(
+        ForeignKey("organizations.id", ondelete="CASCADE"), index=True, nullable=True
+    )
     created_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 

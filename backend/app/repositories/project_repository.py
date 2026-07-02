@@ -28,8 +28,14 @@ class ProjectRepository(SqlAlchemyRepository[Production]):
         offset: int = 0,
         stage: str | None = None,
         status: str | None = None,
+        organization_id: int | None = None,
+        workspace_id: int | None = None,
     ) -> tuple[list[Production], int]:
         q = self.db.query(Production)
+        if organization_id is not None:
+            q = q.filter(Production.organization_id == organization_id)
+        if workspace_id is not None:
+            q = q.filter(Production.workspace_id == workspace_id)
         if not user.is_admin:
             q = q.join(StudioProjectMember).filter(StudioProjectMember.user_id == user.id)
         if stage:

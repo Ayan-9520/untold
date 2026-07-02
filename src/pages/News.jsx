@@ -13,19 +13,29 @@ export default function News() {
   const [articles, setArticles] = useState([]);
   const [trending, setTrending] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     let active = true;
     async function load() {
       setLoading(true);
-      const [listRes, trendRes] = await Promise.all([
-        newsApi.list({ page: 1, page_size: 30 }),
-        newsApi.trending(6),
-      ]);
-      if (!active) return;
-      setArticles(listRes.items);
-      setTrending(trendRes.items);
-      setLoading(false);
+      setError(null);
+      try {
+        const [listRes, trendRes] = await Promise.all([
+          newsApi.list({ page: 1, page_size: 30 }),
+          newsApi.trending(6),
+        ]);
+        if (!active) return;
+        setArticles(listRes.items);
+        setTrending(trendRes.items);
+      } catch (err) {
+        if (!active) return;
+        setArticles([]);
+        setTrending([]);
+        setError(err.message || 'Failed to load news');
+      } finally {
+        if (active) setLoading(false);
+      }
     }
     load();
     return () => { active = false; };
@@ -42,6 +52,15 @@ export default function News() {
   const showTrending = sport === 'All' && trending.length > 0;
 
   if (loading) return <Loader fullScreen label="Loading news" />;
+
+  if (error) {
+    return (
+      <div className="pt-32 pb-20 text-center px-4">
+        <h1 className="text-2xl font-bold dark:text-untold-white light:text-black">News unavailable</h1>
+        <p className="mt-2 text-sm dark:text-untold-muted light:text-gray-600">{error}</p>
+      </div>
+    );
+  }
 
   return (
     <>

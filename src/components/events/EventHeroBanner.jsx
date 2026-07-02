@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import Button from '../ui/Button';
 import { PlayIcon, InfoIcon } from '../icons';
-import { formatEventDate } from '../../data/eventsCatalog';
+import { formatEventDate } from '../../utils/eventDates';
 
 const statusLabel = {
   live: 'Live Now',

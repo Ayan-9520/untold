@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: untold-config
+  namespace: untold
+data:
+  UNTOLD_REGION: "us-east-1"
+  UNTOLD_DEPLOYMENT_ROLE: "secondary"
+  OTEL_RESOURCE_ATTRIBUTES: "deployment.region=us-east-1,deployment.role=secondary"
+  # Point DATABASE_URL at US read replica in secrets; promote on failover

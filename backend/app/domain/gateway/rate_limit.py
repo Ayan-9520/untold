@@ -13,13 +13,21 @@ from app.models.studio_platform import StudioApiKey
 logger = logging.getLogger("untold.gateway.ratelimit")
 
 
-def check_rate_limit(*, api_key: StudioApiKey | None, auth_type: str, identifier: str) -> None:
+def check_rate_limit(
+    *,
+    api_key: StudioApiKey | None,
+    auth_type: str,
+    identifier: str,
+    environment: str = "production",
+) -> None:
     """Raise 429 if rate limit exceeded. JWT uses IP-based default tier."""
     settings = get_settings()
     if not settings.rate_limit_enabled:
         return
 
     tier_name = api_key.rate_limit_tier if api_key else "standard"
+    if environment == "sandbox":
+        tier_name = "standard"
     tier = RATE_LIMIT_TIERS.get(tier_name, RATE_LIMIT_TIERS["standard"])
     limit = tier["limit"]
     key = f"gateway:rl:{api_key.id if api_key else identifier}:{tier_name}"

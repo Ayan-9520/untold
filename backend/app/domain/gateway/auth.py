@@ -49,8 +49,15 @@ def hash_api_key(secret: str) -> str:
     return _hash_key(secret)
 
 
-def _resolve_api_key(db: Session, secret: str) -> StudioApiKey:
-    if not secret.startswith("unt_"):
+def _expected_environment(request: Request) -> str:
+    path = request.url.path
+    if "/gateway/sandbox" in path:
+        return "sandbox"
+    return "production"
+
+
+def _resolve_api_key(db: Session, secret: str, *, expected_env: str) -> StudioApiKey:
+    if not (secret.startswith("unt_") or secret.startswith("unt_live_") or secret.startswith("unt_sandbox_")):
         raise UnauthorizedError("Invalid API key format")
     key_hash = _hash_key(secret)
     row = db.query(StudioApiKey).filter(StudioApiKey.key_hash == key_hash, StudioApiKey.is_active.is_(True)).first()
@@ -58,6 +65,9 @@ def _resolve_api_key(db: Session, secret: str) -> StudioApiKey:
         raise UnauthorizedError("Invalid or revoked API key")
     if row.expires_at and row.expires_at < datetime.now(timezone.utc):
         raise UnauthorizedError("API key expired")
+    key_env = getattr(row, "environment", None) or ("sandbox" if secret.startswith("unt_sandbox_") else "production")
+    if key_env != expected_env:
+        raise ForbiddenError(f"API key is for {key_env} — use /gateway{'/sandbox' if key_env == 'sandbox' else ''}")
     return row
 
 
@@ -83,6 +93,7 @@ def resolve_gateway_auth(
         version = "v1"
 
     request_id = request.headers.get("X-Request-ID")
+    expected_env = _expected_environment(request)
     if x_api_key is None:
         x_api_key = request.headers.get("X-API-Key")
     if x_api_version is None:
@@ -97,7 +108,7 @@ def resolve_gateway_auth(
             credentials = HTTPAuthorizationCredentials(scheme="Bearer", credentials=auth_header[7:])
 
     if x_api_key:
-        row = _resolve_api_key(db, x_api_key)
+        row = _resolve_api_key(db, x_api_key, expected_env=expected_env)
         user = db.query(User).filter(User.id == row.created_by_id).first()
         if not user or not user.is_active:
             raise UnauthorizedError("API key owner inactive")
@@ -110,7 +121,10 @@ def resolve_gateway_auth(
             scopes=_scopes_for_key(row),
             request_id=request_id,
         )
-        check_rate_limit(api_key=row, auth_type="api_key", identifier=str(row.id))
+        request.state.gateway_environment = expected_env
+        check_rate_limit(
+            api_key=row, auth_type="api_key", identifier=str(row.id), environment=expected_env
+        )
         request.state.gateway_auth = auth
         return auth
 
@@ -138,7 +152,10 @@ def resolve_gateway_auth(
             request_id=request_id,
         )
         client_ip = request.client.host if request.client else "unknown"
-        check_rate_limit(api_key=None, auth_type="jwt", identifier=client_ip)
+        check_rate_limit(
+            api_key=None, auth_type="jwt", identifier=client_ip, environment=expected_env
+        )
+        request.state.gateway_environment = expected_env
         request.state.gateway_auth = auth
         return auth
 

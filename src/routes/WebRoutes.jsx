@@ -23,6 +23,8 @@ const Membership = lazy(() => import('../pages/Membership'));
 const Magazine = lazy(() => import('../pages/Magazine'));
 const MagazineIssue = lazy(() => import('../pages/MagazineIssue'));
 const Login = lazy(() => import('../pages/Login'));
+const ForgotPassword = lazy(() => import('../pages/ForgotPassword'));
+const ResetPassword = lazy(() => import('../pages/ResetPassword'));
 const Signup = lazy(() => import('../pages/Signup'));
 const Profile = lazy(() => import('../pages/Profile'));
 const Watchlist = lazy(() => import('../pages/Watchlist'));
@@ -55,6 +57,8 @@ export default function WebRoutes() {
         <Route path="/magazine" element={<Magazine />} />
         <Route path="/magazine/:id" element={<MagazineIssue />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/watchlist" element={<Watchlist />} />

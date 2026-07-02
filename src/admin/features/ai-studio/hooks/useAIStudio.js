@@ -6,6 +6,7 @@ export const aiStudioKey = ['ai-studio'];
 export const aiQueueKey = ['ai-studio', 'queue'];
 export const aiHistoryKey = (module) => ['ai-studio', 'history', module || 'all'];
 export const aiTelemetryKey = (module) => ['ai-studio', 'telemetry', module || 'all'];
+export const aiPromptsKey = (module) => ['ai-studio', 'prompts', module || 'all'];
 
 export function useAIStudioOverview() {
   return useQuery({

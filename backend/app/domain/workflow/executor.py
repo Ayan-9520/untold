@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 
 from app.domain.studio.enums import ProjectStage
+from app.domain.workflow.conditions import evaluate_condition
 from app.domain.workflow.context import WorkflowContext
 from app.domain.workflow.engine import WorkflowEngine
 from app.domain.workflow.events import notify_workflow_event
@@ -23,26 +24,14 @@ from app.models.studio_platform import ProductionPipelineRun, StudioNotification
 logger = logging.getLogger("untold.workflow.executor")
 
 
-def _eval_condition(expression: str | None, ctx: WorkflowContext) -> bool:
-    if not expression:
-        return True
-    field_map = {
-        "research": bool(ctx.research_text),
-        "script": bool(ctx.script_text),
-        "storyboard": bool(ctx.storyboard_scenes),
-        "image": bool(ctx.image_url),
-        "video": bool(ctx.video_url),
-        "voice": bool(ctx.voice_url),
-        "music": bool(ctx.music_url),
-        "seo": bool(ctx.seo_variants),
-        "translation": bool(ctx.translation_text),
-        "publish": bool(ctx.publish_run_id),
-    }
-    key = expression.strip().lower()
-    if key in field_map:
-        return field_map[key]
-    return key in ("true", "1", "yes")
+def _run_plugin_hooks(db: Session, hook_name: str, payload: dict, user_id: int | None) -> dict:
+    try:
+        from app.domain.plugins.registry import PluginEventBus
 
+        return PluginEventBus.run_hooks(db, hook_name, payload, user_id=user_id, commit=False)
+    except Exception:
+        logger.exception("Plugin hook %s failed", hook_name)
+        return payload
 
 class GraphExecutor:
     @staticmethod
@@ -133,7 +122,7 @@ class GraphExecutor:
         run.node_executions = node_executions
         run.current_stage = node_id
         run.progress = GraphExecutor._progress(graph, node_executions)
-        append_log(db, run.id, f"Node started: {node.label} ({node.type})", level="info", stage=node.type)
+        append_log(db, run.id, f"Node started: {node.label} ({node.type})", level="info", stage=node.type, node_id=node_id)
         db.commit()
         notify_workflow_event(
             run.created_by_id,
@@ -141,6 +130,21 @@ class GraphExecutor:
             event="node_started",
             payload={"node_id": node_id, "type": node.type, "progress": run.progress},
         )
+
+        hook_result = _run_plugin_hooks(
+            db,
+            "workflow.before_node",
+            {"run_id": run.id, "node_id": node_id, "type": node.type, "context": {}},
+            run.created_by_id,
+        )
+        if hook_result.get("skip"):
+            GraphExecutor._update_node(node_executions, node_id, status="skipped", completed_at=now)
+            run.node_executions = node_executions
+            append_log(db, run.id, f"Node skipped by plugin hook: {node.label}", level="info", stage=node.type, node_id=node_id)
+            db.commit()
+            for edge in graph.outgoing(node_id):
+                GraphExecutor._execute_node(db, run, ctx, graph, edge.target)
+            return
 
         try:
             if node.type in AGENT_NODE_TYPES:
@@ -173,7 +177,7 @@ class GraphExecutor:
                 return
 
             elif node.type == "condition":
-                branch = "true" if _eval_condition(node.data.get("expression"), ctx) else "false"
+                branch = "true" if evaluate_condition(node.data.get("expression"), ctx) else "false"
                 GraphExecutor._update_node(node_executions, node_id, status="completed", branch=branch, completed_at=now)
                 run.node_executions = node_executions
                 db.commit()
@@ -227,11 +231,27 @@ class GraphExecutor:
                     db.commit()
                     for edge in body_edges:
                         GraphExecutor._execute_node(db, run, ctx, graph, edge.target)
-                    if until_field and _eval_condition(until_field, ctx):
+                    if until_field and evaluate_condition(until_field, ctx):
                         break
                     run = db.query(ProductionPipelineRun).filter(ProductionPipelineRun.id == run.id).first()
                     if GraphExecutor._should_pause(run):
                         return
+
+            elif node.type == "notification":
+                title = node.data.get("title") or f"Workflow: {run.topic[:60]}"
+                body = node.data.get("body") or f"Stage reached: {node.label}"
+                notify_user = node.data.get("user_id") or run.created_by_id
+                if notify_user:
+                    db.add(
+                        StudioNotification(
+                            user_id=int(notify_user),
+                            notification_type=node.data.get("notification_type") or "workflow_notification",
+                            title=title,
+                            body=body,
+                            data={"pipeline_run_id": run.id, "node_id": node_id},
+                        )
+                    )
+                append_log(db, run.id, f"Notification sent: {title}", level="info", stage="notification", node_id=node_id)
 
             elif node.type == "delay":
                 delay_seconds = int(node.data.get("delay_seconds") or 0)
@@ -250,8 +270,14 @@ class GraphExecutor:
                 return
             run.node_executions = node_executions
             run.progress = GraphExecutor._progress(graph, node_executions)
-            append_log(db, run.id, f"Node completed: {node.label}", level="info", stage=node.type)
+            append_log(db, run.id, f"Node completed: {node.label}", level="info", stage=node.type, node_id=node_id)
             db.commit()
+            _run_plugin_hooks(
+                db,
+                "workflow.after_node",
+                {"run_id": run.id, "node_id": node_id, "type": node.type, "output": node_executions.get(node_id, {})},
+                run.created_by_id,
+            )
             notify_workflow_event(
                 run.created_by_id,
                 run_id=run.id,
@@ -329,6 +355,18 @@ class GraphExecutor:
         append_log(db, run_id, "Graph workflow engine running", level="info")
         db.commit()
         notify_workflow_event(run.created_by_id, run_id=run_id, event="run_started", payload={})
+        try:
+            from app.domain.plugins.registry import PluginEventBus
+
+            PluginEventBus.emit(
+                db,
+                "workflow.run.started",
+                {"run_id": run.id, "topic": run.topic, "project_id": run.project_id},
+                user_id=run.created_by_id,
+                commit=True,
+            )
+        except Exception:
+            logger.exception("Plugin event dispatch failed for workflow.run.started")
 
         try:
             entries = graph.entry_nodes()

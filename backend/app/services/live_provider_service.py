@@ -1,5 +1,7 @@
 """Sports API adapters — SportMonks, Sportradar, CricAPI."""
 
+import hashlib
+import hmac
 import logging
 from datetime import datetime, timezone
 from typing import Any
@@ -7,12 +9,28 @@ from typing import Any
 import httpx
 
 from app.core.config import get_settings
+from app.core.exceptions import UnauthorizedError
 from app.models.live import LiveEventType, LiveProvider, LiveSport, MatchStatus
 
 logger = logging.getLogger("untold")
 settings = get_settings()
 
 SUPPORTED_PROVIDERS = ["sportmonks", "sportradar", "cricapi"]
+
+
+def verify_live_webhook_signature(payload: bytes, signature: str | None) -> None:
+    settings = get_settings()
+    secret = settings.live_webhook_secret
+    if settings.is_production:
+        if not secret:
+            raise UnauthorizedError("Live webhook secret is not configured")
+        if not signature:
+            raise UnauthorizedError("Live webhook signature required")
+    if not secret or not signature:
+        return
+    expected = hmac.new(secret.encode(), payload, hashlib.sha256).hexdigest()
+    if not hmac.compare_digest(expected, signature):
+        raise UnauthorizedError("Invalid live webhook signature")
 
 THUMBNAILS = {
     LiveSport.CRICKET: "https://images.unsplash.com/photo-1531415074968-076ba3e9f2e4?w=1200&q=80",

@@ -47,6 +47,11 @@ class OpenAILLMProvider(AIProvider):
                 provider=self.id,
             )
         except Exception as exc:
+            from app.core.config import get_settings
+
+            if get_settings().is_production:
+                logger.error("OpenAI generation failed in production: %s", exc)
+                raise
             logger.warning("OpenAI generation failed, falling back to demo output: %s", exc)
             from app.domain.ai.providers.demo import DemoProvider
 

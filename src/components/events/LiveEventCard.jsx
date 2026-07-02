@@ -1,4 +1,4 @@
-import { formatEventDate } from '../../data/eventsCatalog';
+import { formatEventDate } from '../../utils/eventDates';
 
 export default function LiveEventCard({ event }) {
   const latest = event.liveUpdates?.[0];

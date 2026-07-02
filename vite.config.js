@@ -10,8 +10,31 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': {
-        target: 'http://localhost:8000',
+        target: process.env.VITE_DEV_PROXY_TARGET || 'http://localhost:8000',
         changeOrigin: true,
+      },
+      '/ws': {
+        target: process.env.VITE_DEV_PROXY_TARGET || 'http://localhost:8000',
+        ws: true,
+        changeOrigin: true,
+      },
+    },
+  },
+  build: {
+    chunkSizeWarningLimit: 600,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('recharts') || id.includes('d3-')) return 'charts';
+            if (id.includes('@xyflow') || id.includes('reactflow')) return 'workflow';
+            if (id.includes('framer-motion')) return 'motion';
+            if (id.includes('@tanstack/react-query')) return 'query';
+            if (id.includes('axios')) return 'axios';
+            if (id.includes('react-dom') || id.includes('react-router')) return 'react-vendor';
+          }
+          if (id.includes('/src/admin/')) return 'studio-admin';
+        },
       },
     },
   },

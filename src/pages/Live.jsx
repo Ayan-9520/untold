@@ -9,8 +9,7 @@ import EventUpdateFeed from '../components/live/EventUpdateFeed';
 import BreakingNewsTicker from '../components/engagement/BreakingNewsTicker';
 import Loader from '../components/ui/Loader';
 import liveApi from '../api/live';
-import { LIVE_SPORTS } from '../data/liveCatalog';
-import { buildSportCounts, toSportOptions } from '../utils/contentFilters';
+import { buildSportCounts, toSportOptions, getSportsFromItems } from '../utils/contentFilters';
 
 export default function Live() {
   const [sport, setSport] = useState('All');
@@ -19,20 +18,31 @@ export default function Live() {
   const [highlights, setHighlights] = useState([]);
   const [updates, setUpdates] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     async function load() {
       setLoading(true);
-      const [overview, hl, upd] = await Promise.all([
-        liveApi.getOverview(),
-        liveApi.getHighlights(10),
-        liveApi.getUpdates(12),
-      ]);
-      setFeatured(overview.featured);
-      setMatches(overview.matches.filter((m) => m.id !== overview.featured?.id));
-      setHighlights(hl.data);
-      setUpdates(upd.data);
-      setLoading(false);
+      setError(null);
+      try {
+        const [overview, hl, upd] = await Promise.all([
+          liveApi.getOverview(),
+          liveApi.getHighlights(10),
+          liveApi.getUpdates(12),
+        ]);
+        setFeatured(overview.featured);
+        setMatches((overview.matches || []).filter((m) => m.id !== overview.featured?.id));
+        setHighlights(hl.data || []);
+        setUpdates(upd.data || []);
+      } catch (err) {
+        setFeatured(null);
+        setMatches([]);
+        setHighlights([]);
+        setUpdates([]);
+        setError(err.message || 'Unable to load live data');
+      } finally {
+        setLoading(false);
+      }
     }
     load();
 
@@ -42,8 +52,18 @@ export default function Live() {
 
   const filtered = sport === 'All' ? matches : matches.filter((m) => m.sport === sport);
   const sportCounts = buildSportCounts(matches);
+  const sportOptions = toSportOptions(getSportsFromItems(matches), sportCounts);
 
   if (loading) return <Loader fullScreen label="Loading live scores" />;
+
+  if (error) {
+    return (
+      <div className="pt-32 pb-20 text-center px-4">
+        <h1 className="text-2xl font-bold dark:text-untold-white light:text-black">Live unavailable</h1>
+        <p className="mt-2 text-sm dark:text-untold-muted light:text-gray-600">{error}</p>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -80,7 +100,7 @@ export default function Live() {
           <ContentFilterBar
             primary={{
               label: 'Sport',
-              options: toSportOptions(LIVE_SPORTS, sportCounts),
+              options: sportOptions,
               active: sport,
               onChange: setSport,
             }}

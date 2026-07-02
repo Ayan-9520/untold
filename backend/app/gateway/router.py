@@ -8,10 +8,12 @@ from fastapi.responses import JSONResponse
 
 from app.gateway.openapi_spec import OPENAPI_SPEC
 from app.gateway.rest import router as rest_router
+from app.gateway.sandbox import router as sandbox_router
 from app.services.api_gateway_service import ApiGatewayService
 
 gateway_router = APIRouter(tags=["API Gateway"])
 gateway_router.include_router(rest_router)
+gateway_router.include_router(sandbox_router, prefix="/sandbox")
 
 
 @gateway_router.get("/")

@@ -11,6 +11,7 @@ import MobileApp from './app/MobileApp';
 import AdminApp from './admin/AdminApp';
 import AIApp from './ai/AIApp';
 import AdminLegacyRedirect from './routes/AdminLegacyRedirect';
+import DeveloperApp from './developer/DeveloperApp';
 
 export default function App() {
   return (
@@ -24,6 +25,8 @@ export default function App() {
           <Route path="/admin/*" element={<AdminLegacyRedirect />} />
           {/* UNTOLD AI — Phase 2 SaaS (separate product) */}
           <Route path="/ai/*" element={<AIApp />} />
+          {/* Public developer platform */}
+          <Route path="/developers/*" element={<DeveloperApp />} />
           <Route
             path="/*"
             element={

@@ -1,4 +1,4 @@
-"""AI Cost Optimization REST API."""
+"""AI Cost Optimization & Intelligence REST API."""
 
 from __future__ import annotations
 
@@ -14,13 +14,17 @@ from app.schemas.ai_cost import (
     BudgetUpdate,
     CostAlertResponse,
     CostDashboardResponse,
+    IntelligenceDashboardResponse,
     ModelPolicyResponse,
     ModelPolicyUpdate,
     MonthlyReportResponse,
+    RoutingRequest,
+    RoutingResponse,
 )
+from app.services.ai_cost_intelligence_service import AICostIntelligenceService
 from app.services.ai_cost_service import AICostService
 
-router = APIRouter(prefix="/studio/platform/ai-cost", tags=["AI Cost Optimization"])
+router = APIRouter(prefix="/studio/platform/ai-cost", tags=["AI Cost Intelligence"])
 
 
 @router.get("/dashboard", response_model=CostDashboardResponse)
@@ -31,6 +35,34 @@ def cost_dashboard(
     month: int | None = Query(None, ge=1, le=12),
 ):
     return AICostService.dashboard(db, user, year=year, month=month)
+
+
+@router.get("/intelligence", response_model=IntelligenceDashboardResponse)
+def cost_intelligence_dashboard(
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_studio_user),
+    year: int | None = Query(None),
+    month: int | None = Query(None, ge=1, le=12),
+):
+    return AICostIntelligenceService.intelligence_dashboard(db, user, year=year, month=month)
+
+
+@router.post("/routing/resolve", response_model=RoutingResponse)
+def resolve_routing(
+    data: RoutingRequest,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_studio_user),
+):
+    return AICostIntelligenceService.resolve_routing(
+        db, user, module=data.module, prompt=data.prompt, max_cost_per_request=data.max_cost_per_request,
+    )
+
+
+@router.get("/pricing")
+def pricing_catalog(user: User = Depends(get_current_studio_user)):
+    from app.domain.ai.cost_intelligence import provider_pricing_catalog
+
+    return provider_pricing_catalog()
 
 
 @router.get("/cache-stats")

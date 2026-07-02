@@ -1,10 +1,12 @@
 """Asset Library REST API."""
 
-from fastapi import APIRouter, Depends, File, Form, Query, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
+from app.core.config import get_settings
 from app.core.deps import get_current_studio_user
+from app.core.exceptions import ForbiddenError, NotFoundError
 from app.db.session import get_db
 from app.domain.storage.local import LocalStorageProvider
 from app.models import User
@@ -27,7 +29,9 @@ router = APIRouter(prefix="/studio/platform/assets", tags=["Asset Library"])
 
 @router.get("/overview", response_model=AssetLibraryOverview)
 def asset_overview(db: Session = Depends(get_db), user: User = Depends(get_current_studio_user)):
-    AssetLibraryService.seed_demo_assets(db)
+    settings = get_settings()
+    if settings.is_development and settings.seed_database:
+        AssetLibraryService.seed_demo_assets(db)
     return AssetLibraryService.get_overview(db, user)
 
 
@@ -74,7 +78,12 @@ async def upload_asset(
     user: User = Depends(get_current_studio_user),
 ):
     fname = filename or (file.filename if file else "untitled")
-    data = await file.read() if file else None
+    data = None
+    if file:
+        data = await file.read()
+        max_bytes = get_settings().max_upload_bytes
+        if len(data) > max_bytes:
+            raise HTTPException(status_code=413, detail=f"File exceeds maximum size of {max_bytes} bytes")
     meta = AssetUploadMetadata(
         filename=fname,
         folder=folder,
@@ -173,11 +182,17 @@ def add_permission(
 
 
 @router.get("/files/{file_path:path}")
-def serve_local_file(file_path: str):
+def serve_local_file(
+    file_path: str,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_studio_user),
+):
+    AssetLibraryService.assert_file_access(db, user, file_path)
     local = LocalStorageProvider()
-    path = local.resolve_path(file_path)
+    try:
+        path = local.resolve_path(file_path)
+    except ForbiddenError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
     if not path.exists():
-        from fastapi import HTTPException
-
         raise HTTPException(status_code=404, detail="File not found")
     return FileResponse(path)

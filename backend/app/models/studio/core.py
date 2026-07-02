@@ -26,6 +26,12 @@ class Production(Base):
     publishing_status: Mapped[str] = mapped_column(String(32), default="unpublished", nullable=False)
     assignee: Mapped[str] = mapped_column(String(120), nullable=False)
     owner_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), index=True)
+    organization_id: Mapped[int | None] = mapped_column(
+        ForeignKey("organizations.id", ondelete="CASCADE"), index=True, nullable=True
+    )
+    workspace_id: Mapped[int | None] = mapped_column(
+        ForeignKey("workspaces.id", ondelete="SET NULL"), index=True, nullable=True
+    )
     sources_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)

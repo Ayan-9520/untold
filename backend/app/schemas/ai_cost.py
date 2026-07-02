@@ -30,12 +30,13 @@ class CostDashboardResponse(BaseModel):
     by_user: list[CostBreakdownItem]
     by_model: list[CostBreakdownItem]
     by_provider: list[CostBreakdownItem]
+    by_module: list[CostBreakdownItem] = []
     active_budgets: int
     unacknowledged_alerts: int
 
 
 class BudgetCreate(BaseModel):
-    scope_type: str = Field(pattern="^(global|user|project)$")
+    scope_type: str = Field(pattern="^(global|user|project|organization)$")
     scope_id: int | None = None
     name: str = Field(min_length=1, max_length=200)
     monthly_limit_usd: float = Field(gt=0, le=1_000_000)
@@ -119,3 +120,52 @@ class MonthlyReportResponse(BaseModel):
     generated_at: datetime | None
 
     model_config = {"from_attributes": True}
+
+
+class ModalityBreakdown(BaseModel):
+    modality: str
+    cost_usd: float
+    request_count: int
+    units: dict[str, float] = {}
+
+
+class CostPrediction(BaseModel):
+    mtd_spend_usd: float
+    daily_burn_usd: float
+    projected_month_usd: float
+    projected_remaining_usd: float
+    mtd_requests: int
+    projected_requests: int
+    confidence: str
+
+
+class OptimizationTip(BaseModel):
+    priority: str
+    category: str
+    title: str
+    detail: str
+    action: str
+
+
+class IntelligenceDashboardResponse(CostDashboardResponse):
+    by_module: list[CostBreakdownItem] = []
+    by_modality: list[ModalityBreakdown] = []
+    unit_totals: dict[str, float] = {}
+    prediction: CostPrediction | None = None
+    optimizations: list[OptimizationTip] = []
+    pricing_catalog: dict[str, Any] = {}
+
+
+class RoutingRequest(BaseModel):
+    module: str = Field(min_length=1, max_length=64)
+    prompt: str = Field(min_length=1)
+    max_cost_per_request: float | None = Field(default=None, ge=0)
+
+
+class RoutingResponse(BaseModel):
+    provider: str
+    model: str
+    estimated_cost_usd: float
+    selection_mode: str
+    fallback_chain: list[dict[str, str]]
+    rationale: str

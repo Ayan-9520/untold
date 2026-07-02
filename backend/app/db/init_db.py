@@ -2,11 +2,16 @@
 
 import logging
 import random
+from collections.abc import Iterator
+from contextlib import contextmanager
 
+from sqlalchemy import Enum as SAEnum, text
+from sqlalchemy.dialects.postgresql import ENUM as PGEnum
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.core.security import get_password_hash
+from app.db.base import Base
 from app.db.seed_data import MOCK_USERS, CATEGORIES, build_videos
 from app.db.session import SessionLocal
 from app.models import (
@@ -28,6 +33,47 @@ logger = logging.getLogger("untold")
 settings = get_settings()
 
 
+@contextmanager
+def _native_pg_enum_columns(db: Session) -> Iterator[None]:
+    """Bind ORM enum columns to PostgreSQL native enum types during seed inserts.
+
+    Alembic creates native PG enums (e.g. videotype) while StrEnum uses VARCHAR
+    bindings — seeding must match the database column types.
+    """
+    import app.models.live  # noqa: F401 — register mappers
+    import app.models.monetization  # noqa: F401
+    import app.models.news  # noqa: F401
+    import app.models.studio  # noqa: F401
+
+    pg_enum_names = {
+        row[0] for row in db.execute(text("SELECT typname FROM pg_type WHERE typtype = 'e'"))
+    }
+    patches: list[tuple[object, object]] = []
+    for mapper in Base.registry.mappers:
+        for column in mapper.columns:
+            column_type = column.type
+            if not isinstance(column_type, SAEnum) or column_type.native_enum:
+                continue
+            enum_cls = column_type.enum_class
+            if enum_cls is None:
+                continue
+            pg_name = enum_cls.__name__.lower()
+            if pg_name not in pg_enum_names:
+                continue
+            patches.append((column, column_type))
+            column.type = PGEnum(
+                enum_cls,
+                name=pg_name,
+                create_type=False,
+                values_callable=lambda members: [member.value for member in members],
+            )
+    try:
+        yield
+    finally:
+        for column, original_type in patches:
+            column.type = original_type
+
+
 def seed_database() -> None:
     """Insert seed data when SEED_DATABASE=true and the database is empty."""
     if not settings.seed_database:
@@ -39,20 +85,21 @@ def seed_database() -> None:
 
     db = SessionLocal()
     try:
-        _seed_data(db)
-        from app.db.seed_news import seed_news_data
+        with _native_pg_enum_columns(db):
+            _seed_data(db)
+            from app.db.seed_news import seed_news_data
 
-        seed_news_data(db)
-        from app.db.seed_live import seed_live_data
+            seed_news_data(db)
+            from app.db.seed_live import seed_live_data
 
-        seed_live_data(db)
-        from app.db.seed_monetization import seed_monetization_data
+            seed_live_data(db)
+            from app.db.seed_monetization import seed_monetization_data
 
-        seed_monetization_data(db)
-        logger.info("News, live & monetization seed data applied")
-        from app.db.seed_studio import seed_studio_data
+            seed_monetization_data(db)
+            logger.info("News, live & monetization seed data applied")
+            from app.db.seed_studio import seed_studio_data
 
-        seed_studio_data(db)
+            seed_studio_data(db)
     finally:
         db.close()
 

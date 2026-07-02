@@ -1,0 +1,8 @@
+# Keep local dev secrets and caches out of Docker build context
+backend/.env
+**/__pycache__
+**/*.pyc
+**/.pytest_cache
+node_modules
+.git
+dist

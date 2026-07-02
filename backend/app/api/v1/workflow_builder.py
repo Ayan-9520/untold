@@ -4,11 +4,14 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Header, Query, Request
 from sqlalchemy.orm import Session
 
+from app.core.config import get_settings
 from app.core.deps import get_current_studio_user
+from app.core.exceptions import UnauthorizedError
 from app.db.session import get_db
+from app.middleware.rate_limit import limiter
 from app.models import User
 from app.schemas.production_pipeline import ProductionPipelineRunResponse
 from app.schemas.workflow_builder import (
@@ -17,6 +20,7 @@ from app.schemas.workflow_builder import (
     WorkflowDefinitionResponse,
     WorkflowDefinitionUpdate,
     WorkflowExecuteRequest,
+    WorkflowExecutionLogsPage,
     WorkflowNodeCatalogResponse,
     WorkflowTriggerCreate,
     WorkflowTriggerResponse,
@@ -28,6 +32,34 @@ from app.services.workflow_builder_service import WorkflowBuilderService
 from app.services.workflow_trigger_service import WorkflowTriggerService
 
 router = APIRouter()
+_settings = get_settings()
+
+
+def _resolve_workflow_api_key(
+    x_workflow_api_key: str | None,
+    authorization: str | None,
+) -> str | None:
+    if x_workflow_api_key:
+        return x_workflow_api_key
+    if authorization and authorization.lower().startswith("bearer "):
+        return authorization[7:].strip()
+    return None
+
+
+def _require_workflow_event_auth(
+    db: Session = Depends(get_db),
+    x_workflow_event_key: str | None = Header(None, alias="X-Workflow-Event-Key"),
+    x_workflow_api_key: str | None = Header(None, alias="X-Workflow-API-Key"),
+    authorization: str | None = Header(None),
+) -> None:
+    configured = _settings.workflow_event_secret
+    if configured and x_workflow_event_key and x_workflow_event_key == configured:
+        return
+    api_key = _resolve_workflow_api_key(x_workflow_api_key, authorization)
+    if api_key:
+        WorkflowTriggerService.verify_api_key(db, api_key)
+        return
+    raise UnauthorizedError("X-Workflow-Event-Key or X-Workflow-API-Key required")
 
 
 @router.get("/catalog/nodes", response_model=WorkflowNodeCatalogResponse)
@@ -124,6 +156,34 @@ def get_workflow_version(
     return WorkflowBuilderService.get_version(db, user, definition_id, version_id)
 
 
+@router.post("/definitions/{definition_id}/versions/{version_id}/restore", response_model=WorkflowVersionResponse)
+def restore_workflow_version(
+    definition_id: int,
+    version_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_studio_user),
+):
+    return WorkflowBuilderService.restore_version(db, user, definition_id, version_id)
+
+
+@router.get("/runs/{run_id}/execution-logs", response_model=WorkflowExecutionLogsPage)
+def workflow_execution_logs(
+    run_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_studio_user),
+    level: str | None = Query(None),
+    node_id: str | None = Query(None),
+    limit: int = Query(200, ge=1, le=1000),
+    offset: int = Query(0, ge=0),
+):
+    from app.domain.workflow.logs import query_execution_logs
+    from app.services.production_pipeline_service import ProductionPipelineService
+
+    ProductionPipelineService.get_run(db, user, run_id)
+    items, total = query_execution_logs(db, run_id, level=level, node_id=node_id, limit=limit, offset=offset)
+    return {"items": items, "total": total}
+
+
 @router.post("/definitions/{definition_id}/execute", response_model=ProductionPipelineRunResponse, status_code=201)
 def execute_workflow_definition(
     definition_id: int,
@@ -188,5 +248,61 @@ def delete_workflow_trigger(
 
 
 @router.post("/webhooks/{secret}")
-def workflow_webhook_trigger(secret: str, payload: dict[str, Any], db: Session = Depends(get_db)):
+@limiter.limit(_settings.rate_limit_auth)
+def workflow_webhook_trigger(
+    request: Request,
+    secret: str,
+    payload: dict[str, Any],
+    db: Session = Depends(get_db),
+):
     return WorkflowTriggerService.fire_webhook(db, secret, payload)
+
+
+@router.post("/api/trigger")
+@limiter.limit(_settings.rate_limit_auth)
+def workflow_api_trigger(
+    request: Request,
+    payload: dict[str, Any],
+    db: Session = Depends(get_db),
+    x_workflow_api_key: str | None = Header(None, alias="X-Workflow-API-Key"),
+    authorization: str | None = Header(None),
+):
+    api_key = _resolve_workflow_api_key(x_workflow_api_key, authorization)
+    if not api_key:
+        raise UnauthorizedError("X-Workflow-API-Key or Bearer token required")
+    return WorkflowTriggerService.fire_api(db, api_key, payload)
+
+
+@router.post("/email/{token}")
+@limiter.limit(_settings.rate_limit_auth)
+def workflow_email_trigger(
+    request: Request,
+    token: str,
+    payload: dict[str, Any],
+    db: Session = Depends(get_db),
+):
+    return WorkflowTriggerService.fire_email(db, token, payload)
+
+
+@router.post("/events/{event_name}")
+@limiter.limit(_settings.rate_limit_auth)
+def workflow_event_trigger(
+    request: Request,
+    event_name: str,
+    payload: dict[str, Any],
+    db: Session = Depends(get_db),
+    _: None = Depends(_require_workflow_event_auth),
+):
+    results = WorkflowTriggerService.fire_event(db, event_name, payload)
+    return {"fired": len(results), "runs": results}
+
+
+@router.post("/definitions/{definition_id}/triggers/{trigger_id}/fire")
+def fire_workflow_trigger(
+    definition_id: int,
+    trigger_id: int,
+    payload: dict[str, Any],
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_studio_user),
+):
+    return WorkflowTriggerService.fire_trigger_by_id(db, user, definition_id, trigger_id, payload)

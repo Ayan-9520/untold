@@ -1,6 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
-import { videoCatalog } from '../data/videoCatalog';
-import { getDebateById, getPollById } from '../data/engagementData';
+import { contentApi } from '../api/content';
 
 const VOTES_KEY = 'untold-votes';
 const HISTORY_KEY = 'untold-watch-history';
@@ -20,10 +19,17 @@ function loadJson(key, fallback) {
 export function EngagementProvider({ children }) {
   const [votes, setVotes] = useState({});
   const [watchHistory, setWatchHistory] = useState([]);
+  const [catalogPool, setCatalogPool] = useState([]);
 
   useEffect(() => {
     setVotes(loadJson(VOTES_KEY, {}));
     setWatchHistory(loadJson(HISTORY_KEY, []));
+  }, []);
+
+  useEffect(() => {
+    contentApi.getTrending()
+      .then(({ data }) => setCatalogPool(data))
+      .catch(() => setCatalogPool([]));
   }, []);
 
   const persistVotes = useCallback((next) => {
@@ -52,6 +58,7 @@ export function EngagementProvider({ children }) {
   );
 
   const getVoteCounts = useCallback((item, type = 'debate') => {
+    if (!item?.options) return [];
     const stored = loadJson('untold-vote-counts', {});
     const prefix = `${type}:${item.id}:`;
     return item.options.map((opt) => {
@@ -98,20 +105,19 @@ export function EngagementProvider({ children }) {
 
   const recommendations = useMemo(() => {
     if (watchHistory.length === 0) {
-      return videoCatalog.filter((v) => v.trending || v.featured).slice(0, 8);
+      return catalogPool.slice(0, 8);
     }
 
     const watchedIds = new Set(watchHistory.map((h) => h.id));
     const sports = [...new Set(watchHistory.map((h) => h.sport).filter(Boolean))];
     const categories = [...new Set(watchHistory.map((h) => h.category).filter(Boolean))];
 
-    const scored = videoCatalog
+    const scored = catalogPool
       .filter((v) => !watchedIds.has(v.id))
       .map((v) => {
         let score = 0;
-        if (sports.includes(v.sport)) score += 3;
+        if (sports.includes(v.sport) || sports.includes(v.category)) score += 3;
         if (categories.includes(v.category)) score += 2;
-        if (v.category === 'legends' && watchHistory.some((h) => h.category === 'legends')) score += 2;
         if (v.trending) score += 1;
         if (v.featured) score += 1;
         return { ...v, score };
@@ -119,7 +125,7 @@ export function EngagementProvider({ children }) {
       .sort((a, b) => b.score - a.score);
 
     return scored.slice(0, 8);
-  }, [watchHistory]);
+  }, [watchHistory, catalogPool]);
 
   const continueWatching = useMemo(
     () => watchHistory.filter((h) => h.progress < 0.95).slice(0, 6),
@@ -138,8 +144,6 @@ export function EngagementProvider({ children }) {
         clearHistory,
         recommendations,
         continueWatching,
-        getDebateById,
-        getPollById,
       }}
     >
       {children}

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.orm import Session
 
 from app.core.deps import get_current_admin
@@ -106,9 +106,20 @@ def generate_commentary(data: CommentaryGenerateRequest, _: User = Depends(get_c
 
 
 @router.post("/webhook/{provider}")
-def sports_api_webhook(provider: str, payload: WebhookEventPayload, db: Session = Depends(get_db)):
+async def sports_api_webhook(
+    provider: str,
+    request: Request,
+    db: Session = Depends(get_db),
+):
     if provider not in SUPPORTED_PROVIDERS:
         raise HTTPException(status_code=400, detail=f"Unsupported provider. Use: {SUPPORTED_PROVIDERS}")
+    body = await request.body()
+    from app.services.live_provider_service import verify_live_webhook_signature
+
+    verify_live_webhook_signature(body, request.headers.get("X-Live-Webhook-Signature"))
+    import json
+
+    payload = WebhookEventPayload.model_validate(json.loads(body))
     return LiveSyncService.ingest_webhook(db, provider, payload.model_dump())
 
 

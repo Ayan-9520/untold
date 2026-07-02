@@ -1,12 +1,21 @@
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { getByCategory } from '../../data/videoCatalog';
+import { contentApi } from '../../api/content';
 import SectionHeader from '../ui/SectionHeader';
 import ContentRow from '../ui/ContentRow';
 import SectionReveal from '../ui/SectionReveal';
 import Badge from '../ui/Badge';
 
 export default function RivalriesRow({ limit = 6 }) {
-  const items = getByCategory('rivalries').slice(0, limit);
+  const [items, setItems] = useState([]);
+
+  useEffect(() => {
+    contentApi.getCatalogByCategory('rivalries')
+      .then(({ data }) => setItems(data.slice(0, limit)))
+      .catch(() => setItems([]));
+  }, [limit]);
+
+  if (items.length === 0) return null;
 
   return (
     <SectionReveal className="py-12 sm:py-16 section-cinematic" aria-labelledby="rivalries-row">
@@ -32,7 +41,7 @@ export default function RivalriesRow({ limit = 6 }) {
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent" />
                 <Badge variant="gold" size="sm" className="absolute top-3 left-3">
-                  {item.sport}
+                  {item.category || item.sport}
                 </Badge>
                 <div className="absolute inset-0 flex items-center justify-center">
                   <span className="font-display text-3xl sm:text-4xl font-bold text-untold-gold drop-shadow-lg gold-glow-text">

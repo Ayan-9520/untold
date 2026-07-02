@@ -149,6 +149,8 @@ class MagazineEdition(Base):
     prices_json: Mapped[str | None] = mapped_column(Text, nullable=True)
     pdf_storage_key: Mapped[str | None] = mapped_column(String(500), nullable=True)
     cover_image_url: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    content_json: Mapped[str | None] = mapped_column(Text, nullable=True)
+    page_count: Mapped[int] = mapped_column(Integer, default=48, nullable=False)
     is_published: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
@@ -162,3 +164,21 @@ class MagazineDownload(Base):
     download_url: Mapped[str | None] = mapped_column(String(1000), nullable=True)
     ip_address: Mapped[str | None] = mapped_column(String(45), nullable=True)
     downloaded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class MagazineJob(Base):
+    __tablename__ = "magazine_jobs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    external_id: Mapped[str] = mapped_column(String(120), unique=True, index=True, nullable=False)
+    theme: Mapped[str] = mapped_column(String(200), nullable=False)
+    quarter: Mapped[str] = mapped_column(String(20), nullable=False)
+    year: Mapped[int] = mapped_column(Integer, nullable=False)
+    status: Mapped[str] = mapped_column(String(40), default="collecting", nullable=False)
+    progress: Mapped[int] = mapped_column(Integer, default=10, nullable=False)
+    steps_json: Mapped[str | None] = mapped_column(Text, nullable=True)
+    published_issue_slug: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )

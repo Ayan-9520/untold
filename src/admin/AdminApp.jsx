@@ -40,11 +40,13 @@ export default function AdminApp() {
             <Route path="workflows" element={<StudioRoute><Pages.WorkflowDashboardPage /></StudioRoute>} />
             <Route path="workflows/builder/:definitionId" element={<StudioRoute><Pages.WorkflowBuilderPage /></StudioRoute>} />
             <Route path="workflows/runs/:runId" element={<StudioRoute><Pages.WorkflowRunPage /></StudioRoute>} />
+            <Route path="bi" element={<StudioRoute><Pages.BusinessIntelligencePage /></StudioRoute>} />
             <Route path="marketplace" element={<StudioRoute><Pages.AgentMarketplacePage /></StudioRoute>} />
             <Route path="plugins" element={<StudioRoute><Pages.PluginMarketplacePage /></StudioRoute>} />
             <Route path="plugins/docs" element={<StudioRoute><Pages.PluginDocsPage /></StudioRoute>} />
             <Route path="api-gateway" element={<StudioRoute><Pages.ApiGatewayPage /></StudioRoute>} />
             <Route path="security" element={<StudioRoute><Pages.SecurityDashboardPage /></StudioRoute>} />
+            <Route path="compliance" element={<StudioRoute><Pages.CompliancePage /></StudioRoute>} />
             <Route path="ai-cost" element={<StudioRoute><Pages.AICostOptimizationPage /></StudioRoute>} />
             <Route path="collaboration" element={<StudioRoute><Pages.CollaborationPage /></StudioRoute>} />
             <Route path="collaboration/:projectId" element={<StudioRoute><Pages.CollaborationPage /></StudioRoute>} />

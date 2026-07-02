@@ -1,0 +1,25 @@
+# UNTOLD edge router — regional API routing + safe GET caching
+# Deploy: wrangler deploy (see README.md)
+
+name = "untold-edge-router"
+main = "workers/edge-router.js"
+compatibility_date = "2024-11-01"
+
+# Replace with your Cloudflare account ID
+# account_id = ""
+
+[vars]
+DEFAULT_REGION = "eu"
+CACHE_TTL_SECONDS = "60"
+
+# Route via dashboard or uncomment:
+# routes = [
+#   { pattern = "api.untold.com/*", zone_name = "untold.com" },
+# ]
+
+# Secrets (wrangler secret put):
+# API_ORIGIN_EU = "https://eu-lb.untold.com"
+# API_ORIGIN_US = "https://us-lb.untold.com"
+
+[observability]
+enabled = true

@@ -41,6 +41,11 @@ class EmitTestEventRequest(BaseModel):
     payload: dict[str, Any] = Field(default_factory=dict)
 
 
+class PluginRatingRequest(BaseModel):
+    rating: int = Field(ge=1, le=5)
+    review: str | None = Field(None, max_length=2000)
+
+
 @router.get("/overview", response_model=PluginMarketplaceOverviewResponse)
 def plugin_overview(db: Session = Depends(get_db), user: User = Depends(get_current_studio_user)):
     return PluginSdkService.overview(db, user)
@@ -51,8 +56,9 @@ def list_plugins(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_studio_user),
     category: str | None = Query(None),
+    search: str | None = Query(None),
 ):
-    return PluginSdkService.list_plugins(db, user, category=category)
+    return PluginSdkService.list_plugins(db, user, category=category, search=search)
 
 
 @router.get("/catalog/{slug}")
@@ -147,6 +153,45 @@ def plugin_event_log(
     limit: int = Query(50, ge=1, le=200),
 ):
     return PluginSdkService.event_log(db, user, limit=limit)
+
+
+@router.get("/catalog/{slug}/versions")
+def list_plugin_versions(slug: str, db: Session = Depends(get_db), user: User = Depends(get_current_studio_user)):
+    return PluginSdkService.list_versions(db, user, slug)
+
+
+@router.get("/catalog/{slug}/ratings")
+def list_plugin_ratings(
+    slug: str,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_studio_user),
+    limit: int = Query(20, ge=1, le=100),
+):
+    return PluginSdkService.list_ratings(db, user, slug, limit=limit)
+
+
+@router.post("/catalog/{slug}/ratings")
+def rate_plugin(
+    slug: str,
+    data: PluginRatingRequest,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_studio_user),
+):
+    return PluginSdkService.rate_plugin(db, user, slug, rating=data.rating, review=data.review)
+
+
+@router.get("/hooks")
+def plugin_hooks_catalog():
+    from app.domain.plugins.hooks import HOOK_POINTS
+
+    return {"hooks": HOOK_POINTS}
+
+
+@router.get("/events")
+def plugin_events_catalog():
+    from app.domain.plugins.events import STUDIO_EVENTS
+
+    return {"events": STUDIO_EVENTS}
 
 
 @router.post("/catalog/{slug}/publish-version")

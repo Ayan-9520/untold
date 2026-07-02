@@ -41,6 +41,9 @@ export default function Login() {
           <form onSubmit={handleSubmit} className="mt-8 space-y-4">
             <input type="email" required placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} className={inputClass} />
             <input type="password" required placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} className={inputClass} />
+            <p className="text-right text-sm">
+              <Link to="/forgot-password" className="text-untold-gold font-medium">Forgot password?</Link>
+            </p>
             {error && <p className="text-sm text-red-400">{error}</p>}
             <button type="submit" disabled={loading} className="w-full py-3 rounded-xl bg-untold-gold text-untold-dark font-semibold disabled:opacity-60">
               {loading ? 'Signing in…' : 'Sign In'}

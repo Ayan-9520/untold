@@ -51,6 +51,22 @@ def record_generation_cost(db, generation_id: int, meta: dict) -> None:
     if telemetry.get("output_tokens") is not None:
         row.output_tokens = telemetry["output_tokens"]
     if telemetry.get("estimated_cost_usd") is not None:
-        row.estimated_cost_usd = telemetry["estimated_cost_usd"]
+        row.cost_usd = float(telemetry["estimated_cost_usd"])
+    elif telemetry.get("cost_usd") is not None:
+        row.cost_usd = float(telemetry["cost_usd"])
     if telemetry.get("model"):
         row.model = telemetry["model"]
+
+    org_id = (meta or {}).get("organization_id")
+    if org_id is None and row.project_id:
+        from app.models.studio.core import Production
+
+        prod = db.query(Production).filter(Production.id == row.project_id).first()
+        org_id = prod.organization_id if prod else None
+    if org_id:
+        from app.models.studio.billing import UsageMeterType
+        from app.services.billing.usage_service import UsageMeterService
+
+        tokens = int(telemetry.get("input_tokens") or 0) + int(telemetry.get("output_tokens") or 0)
+        credits = max(1, tokens // 1000) if tokens else 1
+        UsageMeterService.record(db, int(org_id), UsageMeterType.AI_CREDITS, float(credits))

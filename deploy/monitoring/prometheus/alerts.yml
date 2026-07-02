@@ -27,3 +27,12 @@ groups:
           severity: warning
         annotations:
           summary: API p95 latency above 2s
+
+      - alert: PostgresReplicationLag
+        expr: pg_replication_lag_seconds > 30
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: PostgreSQL replication lag exceeds 30s
+          description: Check cross-region replica health before failover.

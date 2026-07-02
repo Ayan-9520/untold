@@ -28,20 +28,39 @@ class RevenueService:
             revenue_by_plan[plan_key] = revenue_by_plan.get(plan_key, 0.0) + price
             mrr += price
 
-        total_revenue = mrr * 12 * 1.5  # simulated lifetime multiplier
         arr = mrr * 12
+        total_revenue = arr
 
-        months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+        monthly_rows = (
+            db.query(
+                func.date_trunc("month", Subscription.started_at),
+                func.count(Subscription.id),
+            )
+            .filter(Subscription.status == SubscriptionStatus.ACTIVE)
+            .group_by(func.date_trunc("month", Subscription.started_at))
+            .order_by(func.date_trunc("month", Subscription.started_at).desc())
+            .limit(6)
+            .all()
+        )
         monthly_revenue = []
-        for i, month in enumerate(months[-6:]):
-            factor = 0.7 + (i * 0.06)
-            monthly_revenue.append({"month": month, "revenue": round(mrr * factor, 2)})
+        for month_start, count in reversed(monthly_rows):
+            label = month_start.strftime("%b") if month_start else "—"
+            monthly_revenue.append({"month": label, "revenue": round(mrr * (count / max(len(active_subs), 1)), 2)})
+
+        if not monthly_revenue and mrr > 0:
+            monthly_revenue = [{"month": "Current", "revenue": round(mrr, 2)}]
+
+        growth_rate = 0.0
+        if len(monthly_rows) >= 2:
+            prev = monthly_rows[1][1] or 1
+            curr = monthly_rows[0][1] or 0
+            growth_rate = round(((curr - prev) / prev) * 100, 1)
 
         return RevenueSummary(
             total_revenue=round(total_revenue, 2),
             mrr=round(mrr, 2),
             arr=round(arr, 2),
-            growth_rate=12.4,
+            growth_rate=growth_rate,
             active_subscriptions=len(active_subs),
             revenue_by_plan={k: round(v, 2) for k, v in revenue_by_plan.items()},
             monthly_revenue=monthly_revenue,

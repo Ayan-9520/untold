@@ -153,6 +153,9 @@ class ComplianceReportResponse(BaseModel):
     frameworks: list[str]
     controls: list[dict]
     recommendations: list[str]
+    framework_coverage: dict | None = None
+    metrics: dict | None = None
+    generated_at: str | None = None
 
 
 class SsoStartResponse(BaseModel):

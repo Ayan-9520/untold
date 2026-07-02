@@ -26,6 +26,7 @@ from app.models.studio_platform import (
     StudioNotification,
 )
 from app.schemas.translation_studio import TranslationApprovalRequest, TranslationGenerateCreate
+from app.services.generation_telemetry_service import finalize_generation_success
 from app.services.studio_platform_service import StudioPlatformService
 
 _TRANSLATION_MODULE = AIGenerationModule.TRANSLATION
@@ -338,6 +339,14 @@ class TranslationStudioService:
             meta["version_id"] = version_row.id
             meta["approval_status"] = "none"
             gen.output_meta = meta
+
+            finalize_generation_success(
+                db,
+                gen,
+                started_at=gen.started_at,
+                output_text=result.translated_text,
+                meta=meta,
+            )
 
             if gen.created_by_id:
                 db.add(

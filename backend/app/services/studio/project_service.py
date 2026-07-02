@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 
 from app.core.exceptions import ForbiddenError, NotFoundError
+from app.domain.gateway.events import emit_gateway_event
 from app.domain.studio.enums import AssetType, PublishingStatus, StudioRole
 from app.domain.studio.permissions import StudioPermissionService
 from app.models import User, Video
@@ -68,6 +69,8 @@ class StudioProjectService:
             else str(project.publishing_status),
             assignee=project.assignee,
             owner_id=project.owner_id,
+            organization_id=project.organization_id,
+            workspace_id=project.workspace_id,
             sources_count=project.sources_count,
             version=project.version,
             video_id=project.video_id,
@@ -90,9 +93,19 @@ class StudioProjectService:
         offset: int = 0,
         stage: str | None = None,
         status: str | None = None,
+        organization_id: int | None = None,
+        workspace_id: int | None = None,
     ) -> tuple[list[ProjectResponse], int]:
         repo = ProjectRepository(db)
-        items, total = repo.list_for_user(user, limit=limit, offset=offset, stage=stage, status=status)
+        items, total = repo.list_for_user(
+            user,
+            limit=limit,
+            offset=offset,
+            stage=stage,
+            status=status,
+            organization_id=organization_id,
+            workspace_id=workspace_id,
+        )
         if not items:
             return [], total
 
@@ -132,8 +145,29 @@ class StudioProjectService:
         return StudioProjectService.to_response(db, project)
 
     @staticmethod
-    def create_project(db: Session, user: User, data: ProjectCreate) -> ProjectResponse:
+    def create_project(
+        db: Session,
+        user: User,
+        data: ProjectCreate,
+        *,
+        organization_id: int | None = None,
+        workspace_id: int | None = None,
+    ) -> ProjectResponse:
+        from app.domain.tenancy.context import TenantContextService
+        from app.services.tenancy_service import TenancyService
+
         StudioPermissionService.require_permission(db, user, None, "project.create")
+
+        if organization_id is None:
+            organization_id = TenantContextService.resolve_primary_org_id(db, user.id)
+        if organization_id is None:
+            raise ForbiddenError("Organization context required to create projects")
+
+        TenancyService.enforce_project_limit(db, organization_id)
+
+        if workspace_id is None:
+            workspace_id = data.workspace_id or TenancyService.default_workspace_id(db, organization_id)
+
         repo = ProjectRepository(db)
         slug = data.slug or _slugify(data.title)
         if repo.get_by_slug(slug):
@@ -149,6 +183,8 @@ class StudioProjectService:
             status="active",
             assignee=data.assignee or user.full_name,
             owner_id=user.id,
+            organization_id=organization_id,
+            workspace_id=workspace_id,
             publishing_status=PublishingStatus.UNPUBLISHED,
             due_date=data.due_date,
         )
@@ -158,6 +194,11 @@ class StudioProjectService:
         StudioActivityService.log_activity(db, user.id, "project.created", project.id, "project", project.id)
         repo.commit()
         repo.refresh(project)
+        emit_gateway_event(
+            "project.created",
+            {"id": project.id, "title": project.title, "slug": project.slug, "stage": project.stage},
+            user_id=user.id,
+        )
         return StudioProjectService.to_response(db, project)
 
     @staticmethod
@@ -172,6 +213,11 @@ class StudioProjectService:
         StudioActivityService.log_activity(db, user.id, "project.updated", project_id, "project", project_id)
         repo.commit()
         repo.refresh(project)
+        emit_gateway_event(
+            "project.updated",
+            {"id": project.id, "title": project.title, "stage": project.stage},
+            user_id=user.id,
+        )
         return StudioProjectService.to_response(db, project)
 
     @staticmethod
@@ -205,6 +251,15 @@ class StudioProjectService:
         StudioActivityService.notify(db, user.id, "publish", f"Published: {project.title}", "Live on UNTOLD Originals")
         repo.commit()
         repo.refresh(project)
+        emit_gateway_event(
+            "video.published",
+            {"id": project.video_id, "project_id": project.id, "title": project.title},
+        )
+        emit_gateway_event(
+            "project.completed",
+            {"id": project.id, "title": project.title, "video_id": project.video_id, "stage": project.stage},
+            user_id=user.id,
+        )
         return StudioProjectService.to_response(db, project)
 
     @staticmethod

@@ -5,6 +5,7 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
+from app.domain.gateway.events import emit_gateway_event
 from app.models import Video
 from app.models.studio import AIAgentJob, Production
 from app.schemas.studio import (
@@ -52,6 +53,10 @@ class StudioService:
             setattr(prod, field, value)
         db.commit()
         db.refresh(prod)
+        emit_gateway_event(
+            "project.updated",
+            {"id": prod.id, "title": prod.title, "stage": prod.stage},
+        )
         return prod
 
     @staticmethod

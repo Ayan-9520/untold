@@ -1,0 +1,21 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: untold-api-pdb
+  namespace: untold
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: untold-api
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: untold-celery-worker-pdb
+  namespace: untold
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: untold-celery-worker

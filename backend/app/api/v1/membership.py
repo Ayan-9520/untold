@@ -4,11 +4,27 @@ from sqlalchemy.orm import Session
 from app.core.deps import get_current_active_user
 from app.db.session import get_db
 from app.models import User
-from app.schemas.monetization import PlansListResponse, SubscribeRequest, SubscribeResponse
+from app.schemas.monetization import PlansListResponse, SubscribeRequest, SubscribeResponse, UserSubscriptionResponse
 from app.services.membership_service import MembershipService
 from app.services.payment_service import PaymentService
 
 router = APIRouter(tags=["Membership"])
+
+
+@router.get("/membership/me", response_model=UserSubscriptionResponse)
+def get_my_subscription(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    sub = MembershipService.get_active_subscription(db, current_user)
+    if not sub:
+        return UserSubscriptionResponse(plan="free", status="active")
+    return UserSubscriptionResponse(
+        plan=sub.plan.value,
+        status=sub.status.value,
+        started_at=sub.started_at,
+        expires_at=sub.expires_at,
+    )
 
 
 @router.get("/plans", response_model=PlansListResponse)

@@ -129,17 +129,19 @@ class WorkflowEngine:
 
     @staticmethod
     def _run_agent(db: Session, run: ProductionPipelineRun, ctx: WorkflowContext, step_id: str) -> AgentStepResult:
+        providers = ctx.providers
         marketplace_slug = WORKFLOW_STEP_MARKETPLACE_SLUG.get(step_id)
+        agent_ctx = None
         if marketplace_slug and run.created_by_id:
-            from app.services.agent_marketplace_service import AgentMarketplaceService
+            from app.services.agent_runtime_service import AgentRuntimeService
 
-            if not AgentMarketplaceService.is_agent_enabled(db, run.created_by_id, marketplace_slug):
-                raise ValueError(
-                    f"Marketplace agent '{marketplace_slug}' is not installed or disabled — install from Agent Marketplace"
-                )
+            agent_ctx = AgentRuntimeService.require_enabled(db, run.created_by_id, marketplace_slug)
+            if agent_ctx and not providers.get(step_id):
+                provider_override = AgentRuntimeService.merged_provider(agent_ctx, step_id)
+                if provider_override:
+                    providers = {**providers, step_id: provider_override}
 
         topic = ctx.topic
-        providers = ctx.providers
 
         if step_id == "idea":
             summary = f"Idea captured: {topic}"
@@ -457,6 +459,29 @@ class WorkflowEngine:
                 db.commit()
 
                 step_result = WorkflowEngine._run_agent(db, run, ctx, step_id)
+                marketplace_slug = WORKFLOW_STEP_MARKETPLACE_SLUG.get(step_id)
+                if marketplace_slug and run.created_by_id:
+                    from app.services.agent_runtime_service import AgentRuntimeService
+
+                    try:
+                        actx = AgentRuntimeService.build_context(
+                            db, run.created_by_id, marketplace_slug, project_id=run.project_id
+                        )
+                        AgentRuntimeService.log_execution(
+                            db,
+                            agent_slug=marketplace_slug,
+                            installation_id=actx.installation_id,
+                            user_id=run.created_by_id,
+                            organization_id=actx.organization_id,
+                            project_id=run.project_id,
+                            run_id=run.id,
+                            generation_id=step_result.generation_id,
+                            status="success",
+                            message=f"Workflow step: {step_id}",
+                            meta={"output_preview": (step_result.output_preview or "")[:200]},
+                        )
+                    except Exception:
+                        pass
                 WorkflowEngine._set_stage(
                     stages,
                     step_id,
@@ -523,6 +548,28 @@ class WorkflowEngine:
         except Exception as exc:
             run = db.query(ProductionPipelineRun).filter(ProductionPipelineRun.id == run_id).first()
             if run and run.status != "cancelled":
+                failed_slug = WORKFLOW_STEP_MARKETPLACE_SLUG.get(run.current_stage or "")
+                if failed_slug and run.created_by_id:
+                    from app.services.agent_runtime_service import AgentRuntimeService
+
+                    try:
+                        actx = AgentRuntimeService.build_context(
+                            db, run.created_by_id, failed_slug, project_id=run.project_id
+                        )
+                        AgentRuntimeService.log_execution(
+                            db,
+                            agent_slug=failed_slug,
+                            installation_id=actx.installation_id,
+                            user_id=run.created_by_id,
+                            organization_id=actx.organization_id,
+                            project_id=run.project_id,
+                            run_id=run.id,
+                            status="failed",
+                            message=str(exc)[:500],
+                            meta={"step_id": run.current_stage},
+                        )
+                    except Exception:
+                        pass
                 if run.current_stage:
                     WorkflowEngine._set_stage(stages, run.current_stage, status="failed", error=str(exc))
                 run.status = "failed"

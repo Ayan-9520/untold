@@ -92,6 +92,48 @@ class AICostService:
         return float(q.with_entities(func.coalesce(func.sum(AIGeneration.cost_usd), 0)).scalar() or 0)
 
     @staticmethod
+    def _monthly_spend_org(
+        db: Session,
+        *,
+        start: datetime,
+        end: datetime,
+        organization_id: int,
+    ) -> float:
+        q = (
+            AICostService._spend_query(db, start, end)
+            .join(Production, AIGeneration.project_id == Production.id)
+            .filter(Production.organization_id == organization_id)
+        )
+        return float(q.with_entities(func.coalesce(func.sum(AIGeneration.cost_usd), 0)).scalar() or 0)
+
+    @staticmethod
+    def _budget_spend(
+        db: Session,
+        budget: AICostBudget,
+        *,
+        start: datetime,
+        end: datetime,
+        gen: AIGeneration | None = None,
+    ) -> float | None:
+        if budget.scope_type == "global":
+            return AICostService._monthly_spend(db, start=start, end=end)
+        if budget.scope_type == "user" and budget.scope_id:
+            if gen and gen.created_by_id != budget.scope_id:
+                return None
+            return AICostService._monthly_spend(db, start=start, end=end, user_id=budget.scope_id)
+        if budget.scope_type == "project" and budget.scope_id:
+            if gen and gen.project_id != budget.scope_id:
+                return None
+            return AICostService._monthly_spend(db, start=start, end=end, project_id=budget.scope_id)
+        if budget.scope_type == "organization" and budget.scope_id:
+            if gen and gen.project_id:
+                prod = db.query(Production).filter(Production.id == gen.project_id).first()
+                if not prod or prod.organization_id != budget.scope_id:
+                    return None
+            return AICostService._monthly_spend_org(db, start=start, end=end, organization_id=budget.scope_id)
+        return None
+
+    @staticmethod
     def get_policy(db: Session, module: str) -> AIModelPolicy | None:
         AICostService.ensure_policies(db)
         policy = db.query(AIModelPolicy).filter(AIModelPolicy.module == module, AIModelPolicy.enabled.is_(True)).first()
@@ -105,16 +147,9 @@ class AICostService:
         start, end = AICostService._month_bounds()
         budgets = db.query(AICostBudget).filter(AICostBudget.enabled.is_(True)).all()
         for budget in budgets:
-            spend = 0.0
-            if budget.scope_type == "global":
-                spend = AICostService._monthly_spend(db, start=start, end=end)
-            elif budget.scope_type == "user" and gen.created_by_id and budget.scope_id == gen.created_by_id:
-                spend = AICostService._monthly_spend(db, start=start, end=end, user_id=gen.created_by_id)
-            elif budget.scope_type == "project" and gen.project_id and budget.scope_id == gen.project_id:
-                spend = AICostService._monthly_spend(db, start=start, end=end, project_id=gen.project_id)
-            else:
+            spend = AICostService._budget_spend(db, budget, start=start, end=end, gen=gen)
+            if spend is None:
                 continue
-
             limit = float(budget.monthly_limit_usd)
             if limit <= 0:
                 continue
@@ -128,17 +163,12 @@ class AICostService:
         start, end = AICostService._month_bounds()
         budgets = db.query(AICostBudget).filter(AICostBudget.enabled.is_(True)).all()
         for budget in budgets:
-            spend = 0.0
+            spend = AICostService._budget_spend(db, budget, start=start, end=end, gen=gen)
+            if spend is None:
+                continue
             notify_user_id = gen.created_by_id
             if budget.scope_type == "global":
-                spend = AICostService._monthly_spend(db, start=start, end=end)
                 notify_user_id = budget.created_by_id or gen.created_by_id
-            elif budget.scope_type == "user" and gen.created_by_id and budget.scope_id == gen.created_by_id:
-                spend = AICostService._monthly_spend(db, start=start, end=end, user_id=gen.created_by_id)
-            elif budget.scope_type == "project" and gen.project_id and budget.scope_id == gen.project_id:
-                spend = AICostService._monthly_spend(db, start=start, end=end, project_id=gen.project_id)
-            else:
-                continue
 
             limit = float(budget.monthly_limit_usd)
             if limit <= 0:
@@ -346,6 +376,8 @@ class AICostService:
         budgets = db.query(AICostBudget).filter(AICostBudget.enabled.is_(True)).count()
         alerts = db.query(AICostAlert).filter(AICostAlert.acknowledged.is_(False)).count()
 
+        by_module = _breakdown(AIGeneration.module)
+
         return {
             "period_start": start,
             "period_end": end,
@@ -359,6 +391,7 @@ class AICostService:
             "by_user": _breakdown(AIGeneration.created_by_id, lambda k: users.get(k, f"User #{k}")),
             "by_model": _breakdown(AIGeneration.model),
             "by_provider": _breakdown(AIGeneration.provider),
+            "by_module": by_module,
             "active_budgets": budgets,
             "unacknowledged_alerts": alerts,
         }
@@ -370,13 +403,7 @@ class AICostService:
         rows = db.query(AICostBudget).order_by(AICostBudget.created_at.desc()).all()
         result = []
         for b in rows:
-            spend = 0.0
-            if b.scope_type == "global":
-                spend = AICostService._monthly_spend(db, start=start, end=end)
-            elif b.scope_type == "user" and b.scope_id:
-                spend = AICostService._monthly_spend(db, start=start, end=end, user_id=b.scope_id)
-            elif b.scope_type == "project" and b.scope_id:
-                spend = AICostService._monthly_spend(db, start=start, end=end, project_id=b.scope_id)
+            spend = AICostService._budget_spend(db, b, start=start, end=end) or 0.0
             limit = float(b.monthly_limit_usd)
             result.append(
                 {
@@ -399,7 +426,7 @@ class AICostService:
     def create_budget(db: Session, user: User, data: BudgetCreate) -> dict:
         StudioPlatformService.require_permission(db, user, None, "admin.manage")
         if data.scope_type != "global" and not data.scope_id:
-            raise BadRequestError("scope_id required for user/project budgets")
+            raise BadRequestError("scope_id required for organization/user/project budgets")
         budget = AICostBudget(
             scope_type=data.scope_type,
             scope_id=data.scope_id,
@@ -414,13 +441,7 @@ class AICostService:
         db.commit()
         db.refresh(budget)
         start, end = AICostService._month_bounds()
-        spend = 0.0
-        if budget.scope_type == "global":
-            spend = AICostService._monthly_spend(db, start=start, end=end)
-        elif budget.scope_type == "user" and budget.scope_id:
-            spend = AICostService._monthly_spend(db, start=start, end=end, user_id=budget.scope_id)
-        elif budget.scope_type == "project" and budget.scope_id:
-            spend = AICostService._monthly_spend(db, start=start, end=end, project_id=budget.scope_id)
+        spend = AICostService._budget_spend(db, budget, start=start, end=end) or 0.0
         limit = float(budget.monthly_limit_usd)
         return {
             "id": budget.id,

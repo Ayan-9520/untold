@@ -20,6 +20,7 @@ class GatewayApiKeyResponse(BaseModel):
     id: int
     name: str
     key_prefix: str
+    environment: str = "production"
     scopes: list[str]
     rate_limit_tier: str
     api_version: str

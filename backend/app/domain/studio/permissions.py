@@ -34,9 +34,24 @@ class StudioPermissionService:
         user: User,
         project_id: int | None,
         permission: str,
+        *,
+        organization_id: int | None = None,
     ) -> None:
         if user.is_admin:
             return
+        if project_id is not None:
+            from app.models.studio.core import Production
+
+            project = db.query(Production).filter(Production.id == project_id).first()
+            if project and project.organization_id and organization_id:
+                if project.organization_id != organization_id:
+                    raise ForbiddenError("Project not in current organization")
+            elif project and project.organization_id and not user.is_admin:
+                from app.domain.tenancy.context import TenantContextService
+
+                membership = TenantContextService.get_membership(db, user.id, project.organization_id)
+                if not membership:
+                    raise ForbiddenError("Not a member of project's organization")
         role = StudioRole.VIEWER
         if project_id is not None:
             role = StudioPermissionService.member_role(db, user, project_id)

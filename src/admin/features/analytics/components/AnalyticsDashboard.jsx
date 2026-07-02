@@ -6,10 +6,11 @@ import StudioLiveBadge from '../../../components/StudioLiveBadge';
 import StatCard from '../../../components/StatCard';
 import { DownloadIcon, EyeIcon, TrendingUpIcon, DollarSignIcon } from '../../../components/AdminIcons';
 
+import { apiUrl } from '../../../../config/runtime';
+
 async function downloadExport(path, filename) {
-  const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
   const token = localStorage.getItem('untold-admin-token');
-  const res = await fetch(`${API_BASE}${path}`, {
+  const res = await fetch(apiUrl(path), {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
   const blob = await res.blob();

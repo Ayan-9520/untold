@@ -1,11 +1,4 @@
 import client from './client';
-import {
-  newsCatalog,
-  getLatestNews,
-  getTrendingNews,
-  getNewsBySport,
-  searchNews,
-} from '../data/newsCatalog';
 
 /** Normalize API article to frontend shape */
 export function normalizeArticle(item) {
@@ -36,53 +29,27 @@ function normalizeList(items = []) {
 
 export const newsApi = {
   async list(params = {}) {
-    try {
-      const { data } = await client.get('/news', { params });
-      return { items: normalizeList(data.items), total: data.total, source: 'api' };
-    } catch {
-      let items = newsCatalog;
-      if (params.sport) items = getNewsBySport(params.sport);
-      if (params.search) items = searchNews(params.search);
-      if (params.trending) items = items.filter((n) => n.trending);
-      if (params.breaking) items = items.filter((n) => n.breaking);
-      return { items, total: items.length, source: 'mock' };
-    }
+    const { data } = await client.get('/news', { params });
+    return { items: normalizeList(data.items), total: data.total, source: 'api' };
   },
 
   async get(id) {
-    try {
-      const { data } = await client.get(`/news/${id}`);
-      return { data: normalizeArticle(data), source: 'api' };
-    } catch {
-      const found = newsCatalog.find((n) => String(n.id) === String(id));
-      return { data: found || null, source: 'mock' };
-    }
+    const { data } = await client.get(`/news/${id}`);
+    return { data: normalizeArticle(data), source: 'api' };
   },
 
   async trending(limit = 10) {
-    try {
-      const { data } = await client.get('/news/trending', { params: { limit } });
-      return { items: normalizeList(data), source: 'api' };
-    } catch {
-      return { items: getTrendingNews(limit), source: 'mock' };
-    }
+    const { data } = await client.get('/news/trending', { params: { limit } });
+    return { items: normalizeList(data), source: 'api' };
   },
 
   async bySport(sport, limit = 20) {
-    try {
-      const { data } = await client.get(`/news/category/${encodeURIComponent(sport)}`, { params: { limit } });
-      return { items: normalizeList(data), source: 'api' };
-    } catch {
-      return { items: getNewsBySport(sport).slice(0, limit), source: 'mock' };
-    }
+    const { data } = await client.get(`/news/category/${encodeURIComponent(sport)}`, { params: { limit } });
+    return { items: normalizeList(data), source: 'api' };
   },
 
   async latest(limit = 10) {
-    const result = await newsApi.list({ page: 1, page_size: limit });
-    if (result.source === 'mock') {
-      return { items: getLatestNews(limit), source: 'mock' };
-    }
-    return result;
+    return newsApi.list({ page: 1, page_size: limit });
   },
 };
 

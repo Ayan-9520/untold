@@ -4,6 +4,7 @@ from app.models.studio.core import AIAgentJob, Production
 from app.models.studio.ai import (
     AICostAlert,
     AICostBudget,
+    AICostEvent,
     AIGeneration,
     AIImageCollection,
     AIImageCollectionItem,
@@ -30,6 +31,12 @@ from app.models.studio.collaboration import (
     CollabPresence,
     CollabSharedFile,
 )
+from app.models.studio.compliance import (
+    ComplianceAccessLog,
+    CompliancePolicy,
+    PrivacyRequest,
+    UserConsent,
+)
 from app.models.studio.enterprise import (
     EnterpriseAuditEvent,
     EnterpriseIdpProvider,
@@ -38,13 +45,25 @@ from app.models.studio.enterprise import (
     EnterpriseSecret,
     EnterpriseSession,
 )
+from app.models.studio.developer import DeveloperAccount
 from app.models.studio.gateway import ApiGatewayUsageLog, ApiGatewayWebhook, ApiGatewayWebhookDelivery
+from app.models.studio.bi import (
+    BIReportDefinition,
+    BIReportRun,
+    BIScheduledReport,
+    BIMetricSnapshot,
+)
 from app.models.studio.marketplace import (
+    AgentExecutionLog,
     AgentInstallation,
     AgentInstallationHistory,
+    AgentMemoryEntry,
+    AgentMessage,
+    AgentSchedule,
     MarketplaceAgent,
     MarketplaceAgentVersion,
 )
+from app.models.studio.mobile import MobileDevice, MobilePushLog
 from app.models.studio.platform import (
     StudioApiKey,
     StudioBackup,
@@ -57,6 +76,7 @@ from app.models.studio.plugins import (
     PluginEventLog,
     PluginInstallation,
     PluginInstallationHistory,
+    PluginRating,
     PluginVersion,
 )
 from app.models.studio.project import (
@@ -95,13 +115,37 @@ from app.models.studio.script import (
 )
 from app.models.studio.storyboard import StoryboardAIInteraction, StoryboardRevision, StoryboardScene
 from app.models.studio.timeline import TimelineExportJob, TimelineSession, TimelineSnapshot
-from app.models.studio.workflow import WorkflowDefinition, WorkflowDefinitionVersion, WorkflowTrigger
+from app.models.studio.billing import (
+    BillingCoupon,
+    BillingCredit,
+    BillingPlan,
+    BillingRefund,
+    BillingWebhookEvent,
+    OrganizationBillingPayment,
+    OrganizationInvoice,
+    OrganizationSubscription,
+    TaxRate,
+    UsageMeterRecord,
+)
+from app.models.studio.tenancy import (
+    Organization,
+    OrganizationBillingAccount,
+    OrganizationInvitation,
+    OrganizationMember,
+    Team,
+    TeamMember,
+    TenantAuditEvent,
+    Workspace,
+    WorkspaceMember,
+)
+from app.models.studio.workflow import WorkflowDefinition, WorkflowDefinitionVersion, WorkflowRunLog, WorkflowTrigger
 
 __all__ = [
     "AIAgentJob",
     "Production",
     "AICostAlert",
     "AICostBudget",
+    "AICostEvent",
     "AIGeneration",
     "AIImageCollection",
     "AIImageCollectionItem",
@@ -117,8 +161,18 @@ __all__ = [
     "AITranslationVersion",
     "AIVideoVersion",
     "AIVoiceVersion",
+    "BIMetricSnapshot",
+    "BIReportDefinition",
+    "BIReportRun",
+    "BIScheduledReport",
+    "MobileDevice",
+    "MobilePushLog",
+    "AgentExecutionLog",
     "AgentInstallation",
     "AgentInstallationHistory",
+    "AgentMemoryEntry",
+    "AgentMessage",
+    "AgentSchedule",
     "ApiGatewayUsageLog",
     "ApiGatewayWebhook",
     "ApiGatewayWebhookDelivery",
@@ -130,8 +184,11 @@ __all__ = [
     "CollabConflict",
     "CollabDocument",
     "CollabDocumentVersion",
+    "ComplianceAccessLog",
+    "CompliancePolicy",
     "CollabPresence",
     "CollabSharedFile",
+    "DeveloperAccount",
     "EnterpriseAuditEvent",
     "EnterpriseIdpProvider",
     "EnterpriseIpRule",
@@ -144,7 +201,9 @@ __all__ = [
     "PluginEventLog",
     "PluginInstallation",
     "PluginInstallationHistory",
+    "PluginRating",
     "PluginVersion",
+    "PrivacyRequest",
     "ProductionPipelineRun",
     "ProjectComment",
     "PublishAgentRun",
@@ -182,8 +241,29 @@ __all__ = [
     "TimelineExportJob",
     "TimelineSession",
     "TimelineSnapshot",
+    "UserConsent",
     "VoiceGeneration",
+    "BillingCoupon",
+    "BillingCredit",
+    "BillingPlan",
+    "BillingRefund",
+    "BillingWebhookEvent",
+    "OrganizationBillingPayment",
+    "OrganizationInvoice",
+    "OrganizationSubscription",
+    "TaxRate",
+    "UsageMeterRecord",
+    "Organization",
+    "OrganizationBillingAccount",
+    "OrganizationInvitation",
+    "OrganizationMember",
+    "Team",
+    "TeamMember",
+    "TenantAuditEvent",
+    "Workspace",
+    "WorkspaceMember",
     "WorkflowDefinition",
     "WorkflowDefinitionVersion",
+    "WorkflowRunLog",
     "WorkflowTrigger",
 ]

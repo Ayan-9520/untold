@@ -1,6 +1,7 @@
 import axios from 'axios';
+import { apiUrl, getApiBase } from '../../config/runtime';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
+const API_BASE = getApiBase();
 const TOKEN_KEY = 'untold-admin-token';
 const REFRESH_KEY = 'untold-admin-refresh';
 
@@ -13,18 +14,44 @@ const adminApi = axios.create({
 adminApi.interceptors.request.use((config) => {
   const token = localStorage.getItem(TOKEN_KEY);
   if (token) config.headers.Authorization = `Bearer ${token}`;
+  const orgId = localStorage.getItem('untold-org-id');
+  if (orgId) config.headers['X-Organization-ID'] = orgId;
+  const workspaceId = localStorage.getItem('untold-workspace-id');
+  if (workspaceId) config.headers['X-Workspace-ID'] = workspaceId;
   return config;
 });
+
+let refreshPromise = null;
+
+async function refreshAdminToken() {
+  const refresh = localStorage.getItem(REFRESH_KEY);
+  if (!refresh) throw new Error('No refresh token');
+  const { data } = await axios.post(`${API_BASE}/auth/refresh`, { refresh_token: refresh });
+  localStorage.setItem(TOKEN_KEY, data.access_token);
+  if (data.refresh_token) localStorage.setItem(REFRESH_KEY, data.refresh_token);
+  return data.access_token;
+}
 
 adminApi.interceptors.response.use(
   (res) => res,
   async (error) => {
-    if (error.response?.status === 401) {
-      localStorage.removeItem(TOKEN_KEY);
-      localStorage.removeItem(REFRESH_KEY);
-      localStorage.removeItem('untold-admin-user');
-      if (!window.location.pathname.includes('/studio/login')) {
-        window.location.href = '/studio/login';
+    const original = error.config;
+    if (error.response?.status === 401 && original && !original._retry) {
+      original._retry = true;
+      try {
+        if (!refreshPromise) refreshPromise = refreshAdminToken().finally(() => { refreshPromise = null; });
+        const token = await refreshPromise;
+        original.headers.Authorization = `Bearer ${token}`;
+        return adminApi(original);
+      } catch {
+        localStorage.removeItem(TOKEN_KEY);
+        localStorage.removeItem(REFRESH_KEY);
+        localStorage.removeItem('untold-admin-user');
+        localStorage.removeItem('untold-org-id');
+        localStorage.removeItem('untold-workspace-id');
+        if (!window.location.pathname.includes('/studio/login')) {
+          window.location.href = '/studio/login';
+        }
       }
     }
     return Promise.reject(error);
@@ -102,6 +129,7 @@ export const membership = {
   getStats: () => adminApi.get('/admin/membership/stats').then((r) => r.data),
   listSubscriptions: (params = {}) => adminApi.get('/admin/membership/subscriptions', { params }).then((r) => r.data),
   updateSubscription: (id, data) => adminApi.patch(`/admin/membership/subscriptions/${id}`, data).then((r) => r.data),
+  listPlans: (params = {}) => adminApi.get('/plans', { params }).then((r) => r.data),
 };
 
 export const magazine = {
@@ -228,7 +256,7 @@ export const studioPlatform = {
   varyImage: (id, data) => adminApi.post(`/studio/platform/image-studio/jobs/${id}/variation`, data || {}).then((r) => r.data),
   getImageVersions: (id) => adminApi.get(`/studio/platform/image-studio/jobs/${id}/versions`).then((r) => r.data),
   saveImageToAsset: (id) => adminApi.post(`/studio/platform/image-studio/jobs/${id}/save-asset`).then((r) => r.data),
-  getImageDownloadUrl: (id) => `${import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1'}/studio/platform/image-studio/jobs/${id}/download`,
+  getImageDownloadUrl: (id) => apiUrl(`/studio/platform/image-studio/jobs/${id}/download`),
   getImageCollections: () => adminApi.get('/studio/platform/image-studio/collections').then((r) => r.data),
   createImageCollection: (data) => adminApi.post('/studio/platform/image-studio/collections', data).then((r) => r.data),
   addImageToCollection: (collectionId, generationId) => adminApi.post(`/studio/platform/image-studio/collections/${collectionId}/items/${generationId}`),
@@ -242,7 +270,7 @@ export const studioPlatform = {
   getVideoHistory: (params) => adminApi.get('/studio/platform/video-studio/history', { params }).then((r) => r.data),
   getVideoVersions: (id) => adminApi.get(`/studio/platform/video-studio/jobs/${id}/versions`).then((r) => r.data),
   saveVideoToAsset: (id) => adminApi.post(`/studio/platform/video-studio/jobs/${id}/save-asset`).then((r) => r.data),
-  getVideoDownloadUrl: (id) => `${import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1'}/studio/platform/video-studio/jobs/${id}/download`,
+  getVideoDownloadUrl: (id) => apiUrl(`/studio/platform/video-studio/jobs/${id}/download`),
   getVideoPrompts: (videoType) => adminApi.get('/studio/platform/video-studio/prompts', { params: videoType ? { video_type: videoType } : {} }).then((r) => r.data),
   retryVideoJob: (id) => adminApi.post(`/studio/platform/video-studio/jobs/${id}/retry`).then((r) => r.data),
   cancelVideoJob: (id) => adminApi.post(`/studio/platform/video-studio/jobs/${id}/cancel`).then((r) => r.data),
@@ -255,8 +283,8 @@ export const studioPlatform = {
   getVoiceHistory: (params) => adminApi.get('/studio/platform/voice-studio/history', { params }).then((r) => r.data),
   getVoiceVersions: (id) => adminApi.get(`/studio/platform/voice-studio/jobs/${id}/versions`).then((r) => r.data),
   saveVoiceToAsset: (id) => adminApi.post(`/studio/platform/voice-studio/jobs/${id}/save-asset`).then((r) => r.data),
-  getVoiceDownloadUrl: (id) => `${import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1'}/studio/platform/voice-studio/jobs/${id}/download`,
-  getVoiceSubtitlesUrl: (id) => `${import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1'}/studio/platform/voice-studio/jobs/${id}/subtitles.srt`,
+  getVoiceDownloadUrl: (id) => apiUrl(`/studio/platform/voice-studio/jobs/${id}/download`),
+  getVoiceSubtitlesUrl: (id) => apiUrl(`/studio/platform/voice-studio/jobs/${id}/subtitles.srt`),
   getVoicePrompts: (language) => adminApi.get('/studio/platform/voice-studio/prompts', { params: language ? { language } : {} }).then((r) => r.data),
   retryVoiceJob: (id) => adminApi.post(`/studio/platform/voice-studio/jobs/${id}/retry`).then((r) => r.data),
   cancelVoiceJob: (id) => adminApi.post(`/studio/platform/voice-studio/jobs/${id}/cancel`).then((r) => r.data),
@@ -270,7 +298,7 @@ export const studioPlatform = {
   toggleMusicFavorite: (id) => adminApi.post(`/studio/platform/music-studio/jobs/${id}/favorite`).then((r) => r.data),
   getMusicVersions: (id) => adminApi.get(`/studio/platform/music-studio/jobs/${id}/versions`).then((r) => r.data),
   saveMusicToAsset: (id) => adminApi.post(`/studio/platform/music-studio/jobs/${id}/save-asset`).then((r) => r.data),
-  getMusicDownloadUrl: (id) => `${import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1'}/studio/platform/music-studio/jobs/${id}/download`,
+  getMusicDownloadUrl: (id) => apiUrl(`/studio/platform/music-studio/jobs/${id}/download`),
   getMusicPrompts: (category) => adminApi.get('/studio/platform/music-studio/prompts', { params: category ? { category } : {} }).then((r) => r.data),
   retryMusicJob: (id) => adminApi.post(`/studio/platform/music-studio/jobs/${id}/retry`).then((r) => r.data),
   cancelMusicJob: (id) => adminApi.post(`/studio/platform/music-studio/jobs/${id}/cancel`).then((r) => r.data),
@@ -281,7 +309,7 @@ export const studioPlatform = {
   getShortsHistory: (params) => adminApi.get('/studio/platform/shorts-studio/history', { params }).then((r) => r.data),
   queueShortsPublish: (id, data) => adminApi.post(`/studio/platform/shorts-studio/jobs/${id}/queue-publish`, data || {}).then((r) => r.data),
   saveShortsToAsset: (id) => adminApi.post(`/studio/platform/shorts-studio/jobs/${id}/save-asset`).then((r) => r.data),
-  getShortsDownloadUrl: (id) => `${import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1'}/studio/platform/shorts-studio/jobs/${id}/download`,
+  getShortsDownloadUrl: (id) => apiUrl(`/studio/platform/shorts-studio/jobs/${id}/download`),
   retryShortsJob: (id) => adminApi.post(`/studio/platform/shorts-studio/jobs/${id}/retry`).then((r) => r.data),
   cancelShortsJob: (id) => adminApi.post(`/studio/platform/shorts-studio/jobs/${id}/cancel`).then((r) => r.data),
 
@@ -309,8 +337,8 @@ export const studioPlatform = {
   requestTranslationApproval: (id, data) => adminApi.post(`/studio/platform/translation-studio/jobs/${id}/request-approval`, data || {}).then((r) => r.data),
   approveTranslation: (id, data) => adminApi.post(`/studio/platform/translation-studio/jobs/${id}/approve`, data || {}).then((r) => r.data),
   rejectTranslation: (id, data) => adminApi.post(`/studio/platform/translation-studio/jobs/${id}/reject`, data || {}).then((r) => r.data),
-  getTranslationSrtUrl: (id) => `${import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1'}/studio/platform/translation-studio/jobs/${id}/subtitles.srt`,
-  getTranslationVttUrl: (id) => `${import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1'}/studio/platform/translation-studio/jobs/${id}/subtitles.vtt`,
+  getTranslationSrtUrl: (id) => apiUrl(`/studio/platform/translation-studio/jobs/${id}/subtitles.srt`),
+  getTranslationVttUrl: (id) => apiUrl(`/studio/platform/translation-studio/jobs/${id}/subtitles.vtt`),
   retryTranslationJob: (id) => adminApi.post(`/studio/platform/translation-studio/jobs/${id}/retry`).then((r) => r.data),
   cancelTranslationJob: (id) => adminApi.post(`/studio/platform/translation-studio/jobs/${id}/cancel`).then((r) => r.data),
 
@@ -395,6 +423,12 @@ export const studioPlatform = {
     adminApi.patch(`/studio/platform/workflow-engine/definitions/${definitionId}/triggers/${triggerId}`, data).then((r) => r.data),
   deleteWorkflowTrigger: (definitionId, triggerId) =>
     adminApi.delete(`/studio/platform/workflow-engine/definitions/${definitionId}/triggers/${triggerId}`),
+  fireWorkflowTrigger: (definitionId, triggerId, data) =>
+    adminApi.post(`/studio/platform/workflow-engine/definitions/${definitionId}/triggers/${triggerId}/fire`, data).then((r) => r.data),
+  listWorkflowExecutionLogs: (runId, params) =>
+    adminApi.get(`/studio/platform/workflow-engine/runs/${runId}/execution-logs`, { params }).then((r) => r.data),
+  restoreWorkflowVersion: (definitionId, versionId) =>
+    adminApi.post(`/studio/platform/workflow-engine/definitions/${definitionId}/versions/${versionId}/restore`).then((r) => r.data),
 
   getAgentMarketplaceOverview: () => adminApi.get('/studio/platform/agent-marketplace/overview').then((r) => r.data),
   listMarketplaceAgents: (params) => adminApi.get('/studio/platform/agent-marketplace/agents', { params }).then((r) => r.data),
@@ -408,6 +442,51 @@ export const studioPlatform = {
   updateAgentVersion: (id) => adminApi.post(`/studio/platform/agent-marketplace/installations/${id}/update`).then((r) => r.data),
   getAgentInstallationHistory: (id) => adminApi.get(`/studio/platform/agent-marketplace/installations/${id}/history`).then((r) => r.data),
   uninstallAgent: (id) => adminApi.delete(`/studio/platform/agent-marketplace/installations/${id}`),
+
+  getAgentPlatformRegistry: () => adminApi.get('/studio/platform/agent-platform/registry').then((r) => r.data),
+  getAgentSdkDocs: () => adminApi.get('/studio/platform/agent-platform/sdk').then((r) => r.data),
+  getAgentMonitoring: () => adminApi.get('/studio/platform/agent-platform/monitoring').then((r) => r.data),
+  getAgentExecutionLogs: (params) => adminApi.get('/studio/platform/agent-platform/logs', { params }).then((r) => r.data),
+  getAgentInstallationAnalytics: (id) =>
+    adminApi.get(`/studio/platform/agent-platform/installations/${id}/analytics`).then((r) => r.data),
+  runAgent: (id, data) =>
+    adminApi.post(`/studio/platform/agent-platform/installations/${id}/run`, data || {}).then((r) => r.data),
+  listAgentMemory: (id, params) =>
+    adminApi.get(`/studio/platform/agent-platform/installations/${id}/memory`, { params }).then((r) => r.data),
+  upsertAgentMemory: (id, data) =>
+    adminApi.put(`/studio/platform/agent-platform/installations/${id}/memory`, data).then((r) => r.data),
+  deleteAgentMemory: (id, memoryId) =>
+    adminApi.delete(`/studio/platform/agent-platform/installations/${id}/memory/${memoryId}`),
+  listAgentSchedules: (id) =>
+    adminApi.get(`/studio/platform/agent-platform/installations/${id}/schedules`).then((r) => r.data),
+  createAgentSchedule: (id, data) =>
+    adminApi.post(`/studio/platform/agent-platform/installations/${id}/schedules`, data).then((r) => r.data),
+  deleteAgentSchedule: (id, scheduleId) =>
+    adminApi.delete(`/studio/platform/agent-platform/installations/${id}/schedules/${scheduleId}`),
+  listAgentMessages: (id, params) =>
+    adminApi.get(`/studio/platform/agent-platform/installations/${id}/messages`, { params }).then((r) => r.data),
+  sendAgentMessage: (id, data) =>
+    adminApi.post(`/studio/platform/agent-platform/installations/${id}/messages`, data).then((r) => r.data),
+
+  getBIExecutive: (params) => adminApi.get('/studio/platform/bi/executive', { params }).then((r) => r.data),
+  getBIRevenue: (params) => adminApi.get('/studio/platform/bi/revenue', { params }).then((r) => r.data),
+  getBIAICosts: (params) => adminApi.get('/studio/platform/bi/ai-costs', { params }).then((r) => r.data),
+  getBIUsage: () => adminApi.get('/studio/platform/bi/usage').then((r) => r.data),
+  getBIPerformance: (params) => adminApi.get('/studio/platform/bi/performance', { params }).then((r) => r.data),
+  getBIProjects: () => adminApi.get('/studio/platform/bi/projects').then((r) => r.data),
+  getBITeams: () => adminApi.get('/studio/platform/bi/teams').then((r) => r.data),
+  getBIOrganizations: () => adminApi.get('/studio/platform/bi/organizations').then((r) => r.data),
+  getBIRetention: (params) => adminApi.get('/studio/platform/bi/retention', { params }).then((r) => r.data),
+  getBIGrowth: (params) => adminApi.get('/studio/platform/bi/growth', { params }).then((r) => r.data),
+  getBICatalog: () => adminApi.get('/studio/platform/bi/catalog').then((r) => r.data),
+  listBIReports: () => adminApi.get('/studio/platform/bi/reports').then((r) => r.data),
+  createBIReport: (data) => adminApi.post('/studio/platform/bi/reports', data).then((r) => r.data),
+  runBIReport: (id, params) => adminApi.post(`/studio/platform/bi/reports/${id}/run`, null, { params }).then((r) => r.data),
+  exportBIReport: (id, format, params) =>
+    adminApi.get(`/studio/platform/bi/reports/${id}/export`, { params: { format, ...params }, responseType: 'blob' }).then((r) => r.data),
+  listBIScheduledReports: () => adminApi.get('/studio/platform/bi/scheduled-reports').then((r) => r.data),
+  createBIScheduledReport: (data) => adminApi.post('/studio/platform/bi/scheduled-reports', data).then((r) => r.data),
+  deleteBIScheduledReport: (id) => adminApi.delete(`/studio/platform/bi/scheduled-reports/${id}`),
 
   getPluginMarketplaceOverview: () => adminApi.get('/studio/platform/plugins/overview').then((r) => r.data),
   listMarketplacePlugins: (params) => adminApi.get('/studio/platform/plugins/catalog', { params }).then((r) => r.data),
@@ -426,6 +505,15 @@ export const studioPlatform = {
   getPluginEventLog: (params) => adminApi.get('/studio/platform/plugins/event-log', { params }).then((r) => r.data),
   testPluginEvent: (data) => adminApi.post('/studio/platform/plugins/test-event', data).then((r) => r.data),
   registerPlugin: (manifest) => adminApi.post('/studio/platform/plugins/register', { manifest }).then((r) => r.data),
+  publishPluginVersion: (slug, data) =>
+    adminApi.post(`/studio/platform/plugins/catalog/${slug}/publish-version`, data).then((r) => r.data),
+  listPluginVersions: (slug) => adminApi.get(`/studio/platform/plugins/catalog/${slug}/versions`).then((r) => r.data),
+  listPluginRatings: (slug, params) =>
+    adminApi.get(`/studio/platform/plugins/catalog/${slug}/ratings`, { params }).then((r) => r.data),
+  ratePlugin: (slug, data) =>
+    adminApi.post(`/studio/platform/plugins/catalog/${slug}/ratings`, data).then((r) => r.data),
+  getPluginHooksCatalog: () => adminApi.get('/studio/platform/plugins/hooks').then((r) => r.data),
+  getPluginEventsCatalog: () => adminApi.get('/studio/platform/plugins/events').then((r) => r.data),
 
   getApiGatewayOverview: () => adminApi.get('/studio/platform/api-gateway/overview').then((r) => r.data),
   getApiGatewayUsageTimeseries: (params) => adminApi.get('/studio/platform/api-gateway/usage/timeseries', { params }).then((r) => r.data),
@@ -460,7 +548,21 @@ export const studioPlatform = {
   createSecuritySecret: (data) => adminApi.post('/studio/platform/security/secrets', data).then((r) => r.data),
   deleteSecuritySecret: (id) => adminApi.delete(`/studio/platform/security/secrets/${id}`),
 
+  getComplianceReport: () => adminApi.get('/studio/platform/compliance/report').then((r) => r.data),
+  listCompliancePolicies: () => adminApi.get('/studio/platform/compliance/policies').then((r) => r.data),
+  updateCompliancePolicy: (key, data) => adminApi.patch(`/studio/platform/compliance/policies/${key}`, data).then((r) => r.data),
+  listComplianceConsents: (params) => adminApi.get('/studio/platform/compliance/consents', { params }).then((r) => r.data),
+  listPrivacyRequests: (params) => adminApi.get('/studio/platform/compliance/privacy-requests', { params }).then((r) => r.data),
+  updatePrivacyRequest: (id, data) => adminApi.patch(`/studio/platform/compliance/privacy-requests/${id}`, data).then((r) => r.data),
+  processPrivacyErasure: (id) => adminApi.post(`/studio/platform/compliance/privacy-requests/${id}/erasure`).then((r) => r.data),
+  exportPrivacyData: (id) => adminApi.post(`/studio/platform/compliance/privacy-requests/${id}/export`).then((r) => r.data),
+  listComplianceAccessLogs: (params) => adminApi.get('/studio/platform/compliance/access-logs', { params }).then((r) => r.data),
+  runComplianceRetention: () => adminApi.post('/studio/platform/compliance/retention/run').then((r) => r.data),
+
   getAICostDashboard: (params) => adminApi.get('/studio/platform/ai-cost/dashboard', { params }).then((r) => r.data),
+  getAICostIntelligence: (params) => adminApi.get('/studio/platform/ai-cost/intelligence', { params }).then((r) => r.data),
+  resolveAICostRouting: (data) => adminApi.post('/studio/platform/ai-cost/routing/resolve', data).then((r) => r.data),
+  getAICostPricing: () => adminApi.get('/studio/platform/ai-cost/pricing').then((r) => r.data),
   getAICostCacheStats: () => adminApi.get('/studio/platform/ai-cost/cache-stats').then((r) => r.data),
   listAICostBudgets: () => adminApi.get('/studio/platform/ai-cost/budgets').then((r) => r.data),
   createAICostBudget: (data) => adminApi.post('/studio/platform/ai-cost/budgets', data).then((r) => r.data),
@@ -512,6 +614,40 @@ export const studioPlatform = {
   updateAdminSettings: (data) => adminApi.put('/studio/platform/admin/settings', data).then((r) => r.data),
   getAdminBackups: () => adminApi.get('/studio/platform/admin/backups').then((r) => r.data),
   createBackup: (label) => adminApi.post('/studio/platform/admin/backups', null, { params: label ? { label } : {} }).then((r) => r.data),
+
+  listStudioNotifications: (params) => adminApi.get('/studio/platform/notifications', { params }).then((r) => r.data),
+  markStudioNotificationRead: (id) => adminApi.post(`/studio/platform/notifications/${id}/read`).then((r) => r.data),
+};
+
+export const tenancy = {
+  listOrganizations: () => adminApi.get('/studio/tenancy/organizations').then((r) => r.data),
+  createOrganization: (data) => adminApi.post('/studio/tenancy/organizations', data).then((r) => r.data),
+  getCurrentOrganization: () => adminApi.get('/studio/tenancy/organizations/current').then((r) => r.data),
+  updateCurrentOrganization: (data) => adminApi.patch('/studio/tenancy/organizations/current', data).then((r) => r.data),
+  getUsage: () => adminApi.get('/studio/tenancy/organizations/current/usage').then((r) => r.data),
+  listMembers: () => adminApi.get('/studio/tenancy/organizations/current/members').then((r) => r.data),
+  listTeams: () => adminApi.get('/studio/tenancy/teams').then((r) => r.data),
+  listWorkspaces: () => adminApi.get('/studio/tenancy/workspaces').then((r) => r.data),
+  setActiveOrg: (orgId) => {
+    localStorage.setItem('untold-org-id', String(orgId));
+    return Promise.resolve(orgId);
+  },
+};
+
+export const enterpriseBilling = {
+  listPlans: () => adminApi.get('/studio/billing/plans').then((r) => r.data),
+  getSubscription: () => adminApi.get('/studio/billing/subscription').then((r) => r.data),
+  subscribe: (data) => adminApi.post('/studio/billing/subscribe', data).then((r) => r.data),
+  updateSubscription: (data) => adminApi.patch('/studio/billing/subscription', data).then((r) => r.data),
+  listInvoices: () => adminApi.get('/studio/billing/invoices').then((r) => r.data),
+  listPayments: () => adminApi.get('/studio/billing/payments').then((r) => r.data),
+  getUsage: () => adminApi.get('/studio/billing/usage').then((r) => r.data),
+  validateCoupon: (data) => adminApi.post('/studio/billing/coupons/validate', data).then((r) => r.data),
+};
+
+export const newsAdmin = {
+  publish: (data) => adminApi.post('/admin/news/publish', data).then((r) => r.data),
+  fetchExternal: (data) => adminApi.post('/admin/news/fetch', data).then((r) => r.data),
 };
 
 export default adminApi;

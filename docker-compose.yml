@@ -1,18 +1,19 @@
 # UNTOLD — full-stack development compose
 # Usage: cp deploy/env/development.env.example .env && docker compose up -d
+#
+# db/redis are internal-only (no host port publish) so compose works alongside
+# local Postgres/Redis on 5432/6379. API is at :8000, web at :8080.
 
 name: untold
 
 services:
   db:
-    image: postgres:16-alpine
+    image: pgvector/pgvector:pg16
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-untold}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-untold_secret}
       POSTGRES_DB: ${POSTGRES_DB:-untold_db}
-    ports:
-      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -25,8 +26,6 @@ services:
     image: redis:7-alpine
     restart: unless-stopped
     command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
-    ports:
-      - "${REDIS_PORT:-6379}:6379"
     volumes:
       - redis_data:/data
     healthcheck:
@@ -43,7 +42,7 @@ services:
     ports:
       - "${API_PORT:-8000}:8000"
     env_file:
-      - .env
+      - deploy/env/development.env.example
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-untold}:${POSTGRES_PASSWORD:-untold_secret}@db:5432/${POSTGRES_DB:-untold_db}
       REDIS_URL: redis://redis:6379/0
@@ -77,7 +76,7 @@ services:
       retries: 3
       start_period: 120s
     env_file:
-      - .env
+      - deploy/env/development.env.example
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-untold}:${POSTGRES_PASSWORD:-untold_secret}@db:5432/${POSTGRES_DB:-untold_db}
       REDIS_URL: redis://redis:6379/0
@@ -95,8 +94,14 @@ services:
       dockerfile: deploy/docker/Dockerfile.api
     restart: unless-stopped
     entrypoint: ["celery", "-A", "app.workers.celery_app", "beat", "--loglevel=info"]
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import os; os.kill(1, 0)\""]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
     env_file:
-      - .env
+      - deploy/env/development.env.example
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-untold}:${POSTGRES_PASSWORD:-untold_secret}@db:5432/${POSTGRES_DB:-untold_db}
       REDIS_URL: redis://redis:6379/0
@@ -112,7 +117,8 @@ services:
       context: .
       dockerfile: deploy/docker/Dockerfile.web
       args:
-        VITE_API_URL: ${VITE_API_URL:-/api/v1}
+        VITE_API_URL: /api/v1
+        VITE_WS_URL: ""
     restart: unless-stopped
     ports:
       - "${WEB_PORT:-8080}:80"

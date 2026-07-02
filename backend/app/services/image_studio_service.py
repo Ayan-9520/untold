@@ -23,7 +23,7 @@ from app.models.studio_platform import (
     StudioNotification,
 )
 from app.schemas.image_studio import ImageCollectionCreate, ImageGenerateCreate
-from app.services.generation_telemetry_service import apply_failure, apply_success
+from app.services.generation_telemetry_service import apply_failure, finalize_generation_success
 from app.services.studio_platform_service import StudioPlatformService
 
 _IMAGE_MODULES = frozenset({AIGenerationModule.IMAGE, AIGenerationModule.THUMBNAIL})
@@ -247,7 +247,7 @@ class ImageStudioService:
             gen.result_url = result.result_url
             gen.r2_key = result.r2_key
             gen.provider = result.provider
-            apply_success(gen, started_at=gen.started_at, output_text=result.output_text, meta=result.meta)
+            finalize_generation_success(db, gen, started_at=gen.started_at, output_text=result.output_text, meta=result.meta)
 
             ImageStudioService._save_version(
                 db, gen.id, gen.created_by_id, result.result_url, result.r2_key, result.meta,

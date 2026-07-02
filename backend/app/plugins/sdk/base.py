@@ -44,6 +44,9 @@ class BasePlugin(ABC):
     def on_uninstall(self, ctx: PluginContext) -> None:
         """Called before uninstall."""
 
+    def on_update(self, ctx: PluginContext, from_version: int, to_version: int) -> None:
+        """Called after plugin is updated to a new version."""
+
     def on_event(self, ctx: PluginContext, event_name: str, payload: dict[str, Any]) -> dict[str, Any] | None:
         """Handle subscribed studio events. Return optional result dict."""
         return None

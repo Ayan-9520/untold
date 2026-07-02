@@ -2,11 +2,22 @@ from sqlalchemy import or_
 from sqlalchemy.orm import Session, joinedload
 
 from app.core.exceptions import NotFoundError
+from app.domain.gateway.events import emit_gateway_event
 from app.models import Category, Video, VideoType
 from app.schemas.video import VideoCreateRequest, VideoListParams, VideoUpdateRequest
 
 
 class VideoService:
+    @staticmethod
+    def _webhook_payload(video: Video) -> dict:
+        return {
+            "id": video.id,
+            "title": video.title,
+            "slug": video.slug,
+            "video_type": str(video.video_type.value if hasattr(video.video_type, "value") else video.video_type),
+            "is_active": video.is_active,
+        }
+
     @staticmethod
     def list_videos(db: Session, params: VideoListParams) -> tuple[list[Video], int]:
         query = (
@@ -96,6 +107,7 @@ class VideoService:
         db.add(video)
         db.commit()
         db.refresh(video)
+        emit_gateway_event("video.created", VideoService._webhook_payload(video))
         return video
 
     @staticmethod
@@ -113,6 +125,7 @@ class VideoService:
 
         db.commit()
         db.refresh(video)
+        emit_gateway_event("video.updated", VideoService._webhook_payload(video))
         return video
 
     @staticmethod

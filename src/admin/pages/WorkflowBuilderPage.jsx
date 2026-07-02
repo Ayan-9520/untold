@@ -4,6 +4,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import StudioPageHeader from '../components/StudioPageHeader';
 import WorkflowCanvas from '../components/workflow/WorkflowCanvas';
 import WorkflowNodePalette from '../components/workflow/WorkflowNodePalette';
+import { WorkflowTriggersPanel, WorkflowVersionHistory } from '../components/workflow/WorkflowAutomationPanels';
 import { studioPlatform } from '../api/adminApi';
 import { studioPath } from '../../config/ecosystem';
 
@@ -77,6 +78,18 @@ function NodeInspector({ node, catalog, onChange }) {
             onChange={(e) => onChange(node.id, { max_iterations: Number(e.target.value) })}
           />
         </label>
+      )}
+      {node.data?.nodeType === 'notification' && (
+        <>
+          <label className="block">
+            <span className="text-xs dark:text-untold-muted">Title</span>
+            <input className="studio-input w-full mt-1" value={node.data?.title || ''} onChange={(e) => onChange(node.id, { title: e.target.value })} />
+          </label>
+          <label className="block">
+            <span className="text-xs dark:text-untold-muted">Body</span>
+            <input className="studio-input w-full mt-1" value={node.data?.body || ''} onChange={(e) => onChange(node.id, { body: e.target.value })} />
+          </label>
+        </>
       )}
       {node.data?.nodeType === 'delay' && (
         <label className="block">
@@ -206,7 +219,7 @@ export default function WorkflowBuilderPage() {
     <div className="studio-page">
       <StudioPageHeader
         title={isNew ? 'New Workflow' : name}
-        description="Visual production pipeline — drag nodes, connect stages, version, and execute"
+        description="Enterprise workflow automation — visual builder, triggers, approvals, scheduling, and version history"
         actions={
           <div className="flex gap-2 flex-wrap">
             <Link to={studioPath('workflows')} className="studio-btn studio-btn--ghost text-sm">
@@ -266,6 +279,21 @@ export default function WorkflowBuilderPage() {
             <div className="text-xs dark:text-untold-muted border-t dark:border-white/10 pt-3">
               Version v{definition.current_version.version} · {definition.status}
             </div>
+          )}
+          {!isNew && (
+            <>
+              <div className="border-t dark:border-white/10 pt-3">
+                <h3 className="text-sm font-semibold mb-2">Triggers</h3>
+                <WorkflowTriggersPanel definitionId={Number(definitionId)} />
+              </div>
+              <div className="border-t dark:border-white/10 pt-3">
+                <h3 className="text-sm font-semibold mb-2">Version history</h3>
+                <WorkflowVersionHistory
+                  definitionId={Number(definitionId)}
+                  onRestore={() => qc.invalidateQueries({ queryKey: workflowBuilderKey })}
+                />
+              </div>
+            </>
           )}
         </aside>
       </div>

@@ -35,6 +35,9 @@ class AIGeneration(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     project_id: Mapped[int | None] = mapped_column(ForeignKey("productions.id", ondelete="SET NULL"), index=True)
+    organization_id: Mapped[int | None] = mapped_column(
+        ForeignKey("organizations.id", ondelete="SET NULL"), index=True, nullable=True
+    )
     module: Mapped[AIGenerationModule] = mapped_column(StrEnum(AIGenerationModule))
     prompt: Mapped[str] = mapped_column(Text, nullable=False)
     parameters: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
@@ -348,3 +351,33 @@ class AIMonthlyCostReport(Base):
     report_data: Mapped[dict] = mapped_column(JSONB, nullable=False)
     generated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), server_default=func.now())
     generated_by_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+
+
+class AICostEvent(Base):
+    """Granular AI cost ledger — provider, model, modality units."""
+
+    __tablename__ = "ai_cost_events"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    generation_id: Mapped[int | None] = mapped_column(
+        ForeignKey("ai_generations.id", ondelete="SET NULL"), index=True, nullable=True
+    )
+    organization_id: Mapped[int | None] = mapped_column(
+        ForeignKey("organizations.id", ondelete="SET NULL"), index=True, nullable=True
+    )
+    project_id: Mapped[int | None] = mapped_column(
+        ForeignKey("productions.id", ondelete="SET NULL"), index=True, nullable=True
+    )
+    user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    module: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    modality: Mapped[str] = mapped_column(String(32), default="tokens", nullable=False, index=True)
+    provider: Mapped[str] = mapped_column(String(64), nullable=False)
+    model: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    cost_usd: Mapped[float] = mapped_column(default=0, nullable=False)
+    input_tokens: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    output_tokens: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    units: Mapped[dict] = mapped_column(JSONB, default=dict, nullable=False)
+    cache_hit: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    meta: Mapped[dict] = mapped_column(JSONB, default=dict, nullable=False)
+    created_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), server_default=func.now())
+

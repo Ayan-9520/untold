@@ -1,12 +1,7 @@
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { getByCategory, videoCatalog } from '../../data/videoCatalog';
-import {
-  getByVertical,
-  getAwardWinning,
-  getEditorsChoice,
-  getLatestReleases,
-} from '../../data/verticalCatalog';
-import { contentApi } from '../../api/content';
+import { api } from '../../api/client';
+import { mapVideo } from '../../api/content';
 import SectionHeader from '../ui/SectionHeader';
 import ContentRow from '../ui/ContentRow';
 import VideoCard, { VideoCardSkeleton } from '../ui/VideoCard';
@@ -14,38 +9,73 @@ import ShortsCard from '../ui/ShortsCard';
 import SectionReveal from '../ui/SectionReveal';
 import ContinueWatching from './ContinueWatching';
 
-function resolveItems(row) {
+async function fetchRowItems(row) {
+  const pageSize = row.variant === 'short' || row.category === 'shorts' ? 12 : 10;
+  const params = { page_size: pageSize };
+
   switch (row.type) {
     case 'trending':
-      return videoCatalog.filter((v) => v.trending).slice(0, 10);
+      return (await api.videos.list({ ...params, trending: true })).items.map(mapVideo);
     case 'latest':
-      return getLatestReleases(10);
+      return (await api.videos.list(params)).items.map(mapVideo);
     case 'award':
-      return getAwardWinning(8);
     case 'editors':
-      return getEditorsChoice(8);
+      return (await api.videos.list({ ...params, featured: true })).items.map(mapVideo);
+    case 'category':
+      return (await api.videos.list({ ...params, category: row.category })).items.map(mapVideo);
     case 'vertical':
       if (row.vertical === 'sports') {
-        return [
-          ...getByCategory('legends').slice(0, 6),
-          ...getByVertical('ufc', 2),
-        ].slice(0, 10);
+        const [legends, ufc] = await Promise.all([
+          api.videos.list({ category: 'legends', page_size: 6 }),
+          api.videos.list({ category: 'ufc', page_size: 4 }),
+        ]);
+        return [...legends.items, ...ufc.items].map(mapVideo).slice(0, pageSize);
       }
-      return getByVertical(row.vertical, 10);
-    case 'category':
-      return getByCategory(row.category).slice(0, 10);
+      return (await api.videos.list({ ...params, category: row.vertical })).items.map(mapVideo);
     default:
       return [];
   }
 }
 
 export default function HomeRow({ row }) {
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(row.type !== 'continue');
+
+  useEffect(() => {
+    if (row.type === 'continue') return;
+    let cancelled = false;
+    setLoading(true);
+    fetchRowItems(row)
+      .then((data) => {
+        if (!cancelled) setItems(data);
+      })
+      .catch(() => {
+        if (!cancelled) setItems([]);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [row.type, row.category, row.vertical, row.variant]);
+
   if (row.type === 'continue') {
     return <ContinueWatching />;
   }
 
-  const items = resolveItems(row);
   const isShorts = row.variant === 'short' || row.category === 'shorts';
+
+  if (loading) {
+    return (
+      <div className="ott-row">
+        <div className="h-6 w-48 skeleton rounded mb-4 mx-4 sm:mx-8" />
+        <ContentRow>
+          {[...Array(5)].map((_, i) => (
+            <VideoCardSkeleton key={i} />
+          ))}
+        </ContentRow>
+      </div>
+    );
+  }
 
   if (!items.length) return null;
 
@@ -71,13 +101,13 @@ export default function HomeRow({ row }) {
               <VideoCard
                 title={item.title}
                 image={item.image}
-                category={item.vertical || item.sport || item.format}
-                format={item.format}
+                category={item.vertical || item.sport || item.category || item.format}
+                format={item.format || item.videoType}
                 duration={item.duration}
                 description={item.description}
-                variant={item.category === 'legends' ? 'legend' : 'default'}
+                variant={row.category === 'legends' ? 'legend' : 'default'}
                 videoId={item.id}
-                trailerUrl={item.trailerUrl}
+                trailerUrl={item.videoUrl}
                 rating={item.rating}
               />
             </Link>

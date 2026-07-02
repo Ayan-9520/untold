@@ -13,7 +13,7 @@ celery_app = Celery(
     "untold",
     broker=settings.celery_broker_url,
     backend=settings.celery_result_backend,
-    include=["app.workers.tasks", "app.workers.studio_tasks", "app.workers.publish_tasks"],
+    include=["app.workers.tasks", "app.workers.studio_tasks", "app.workers.publish_tasks", "app.workers.billing_tasks", "app.workers.compliance_tasks"],
 )
 
 celery_app.conf.update(
@@ -44,6 +44,10 @@ celery_app.conf.update(
             "task": "untold.process_workflow_cron_triggers",
             "schedule": crontab(minute="*"),
         },
+        "process-agent-schedules": {
+            "task": "untold.process_agent_schedules",
+            "schedule": crontab(minute="*"),
+        },
         "process-scheduled-workflow-runs": {
             "task": "untold.process_scheduled_workflow_runs",
             "schedule": crontab(minute="*"),
@@ -51,6 +55,26 @@ celery_app.conf.update(
         "generate-ai-monthly-cost-reports": {
             "task": "untold.generate_ai_monthly_cost_reports",
             "schedule": crontab(day_of_month="1", hour="6", minute="0"),
+        },
+        "retry-failed-billing-payments": {
+            "task": "untold.retry_failed_billing_payments",
+            "schedule": crontab(hour="*/6", minute="15"),
+        },
+        "aggregate-billing-usage": {
+            "task": "untold.aggregate_billing_usage",
+            "schedule": crontab(hour="2", minute="0"),
+        },
+        "aggregate-bi-daily-snapshots": {
+            "task": "untold.aggregate_bi_daily_snapshots",
+            "schedule": crontab(hour="3", minute="0"),
+        },
+        "process-scheduled-bi-reports": {
+            "task": "untold.process_scheduled_bi_reports",
+            "schedule": crontab(minute="*/15"),
+        },
+        "compliance-retention-purge": {
+            "task": "untold.compliance_retention_purge",
+            "schedule": crontab(hour="4", minute="0"),
         },
     },
 )

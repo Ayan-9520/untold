@@ -1,7 +1,27 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { auth } from '../api/adminApi';
+import { auth, tenancy } from '../api/adminApi';
+
+async function bootstrapTenancy() {
+  try {
+    const org = await tenancy.getCurrentOrganization();
+    if (org?.id) await tenancy.setActiveOrg(org.id);
+  } catch {
+    try {
+      const orgs = await tenancy.listOrganizations();
+      if (orgs?.[0]?.id) await tenancy.setActiveOrg(orgs[0].id);
+    } catch {
+      /* org context optional until user joins an org */
+    }
+  }
+}
 
 const AdminAuthContext = createContext(null);
+
+function userHasStudioAccess(profile) {
+  if (!profile) return false;
+  if (profile.has_studio_access != null) return !!profile.has_studio_access;
+  return !!(profile.is_admin || profile.studio_role);
+}
 
 export function AdminAuthProvider({ children }) {
   const [user, setUser] = useState(null);
@@ -12,7 +32,12 @@ export function AdminAuthProvider({ children }) {
       if (auth.isAuthenticated()) {
         try {
           const profile = await auth.getMe();
-          setUser(profile);
+          if (userHasStudioAccess(profile)) {
+            setUser(profile);
+            await bootstrapTenancy();
+          } else {
+            auth.logout();
+          }
         } catch {
           auth.logout();
         }
@@ -24,12 +49,12 @@ export function AdminAuthProvider({ children }) {
 
   const login = useCallback(async (email, password) => {
     const profile = await auth.login(email, password);
-    const hasAccess = profile.is_admin || profile.studio_role;
-    if (!hasAccess) {
+    if (!userHasStudioAccess(profile)) {
       auth.logout();
       throw new Error('Studio access required');
     }
     setUser(profile);
+    await bootstrapTenancy();
     return profile;
   }, []);
 
@@ -45,7 +70,7 @@ export function AdminAuthProvider({ children }) {
         loading,
         isAuthenticated: !!user,
         isAdmin: user?.is_admin ?? false,
-        hasStudioAccess: !!(user?.is_admin || user?.studio_role),
+        hasStudioAccess: userHasStudioAccess(user),
         studioRole: user?.studio_role ?? null,
         permissions: user?.permissions ?? [],
         login,

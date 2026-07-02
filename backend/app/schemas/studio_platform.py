@@ -38,6 +38,8 @@ class ProjectResponse(ORMBase):
     publishing_status: str
     assignee: str
     owner_id: int | None
+    organization_id: int | None = None
+    workspace_id: int | None = None
     sources_count: int
     version: int
     video_id: int | None
@@ -62,6 +64,7 @@ class ProjectCreate(BaseModel):
     stage: str = "research"
     assignee: str | None = None
     due_date: datetime | None = None
+    workspace_id: int | None = None
 
     @field_validator("stage")
     @classmethod

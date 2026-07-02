@@ -8,8 +8,6 @@ import {
   MAGAZINE_THEMES,
   MAGAZINE_AI_STACK,
   MAGAZINE_SECTIONS,
-  MOCK_WORKFLOW_JOBS,
-  getMagazineIssues,
 } from '../../data/magazineCatalog';
 import { FilmIcon } from '../components/AdminIcons';
 
@@ -21,23 +19,30 @@ const STATUS_COLORS = {
 
 export default function MagazinePage() {
   const [jobs, setJobs] = useState([]);
-  const [usingMock, setUsingMock] = useState(false);
+  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [theme, setTheme] = useState('IPL Special');
   const [quarter, setQuarter] = useState('Q2');
   const [year, setYear] = useState(2026);
   const [generating, setGenerating] = useState(false);
   const [selectedJob, setSelectedJob] = useState(null);
-  const issues = getMagazineIssues();
+  const [issues, setIssues] = useState([]);
 
   useEffect(() => {
     import('../api/adminApi').then((m) => {
       m.magazine?.listJobs?.()
         .then((data) => {
-          const items = data.items?.length ? data.items : MOCK_WORKFLOW_JOBS;
-          setJobs(items);
-          setUsingMock(!data.items?.length);
+          setJobs(data.items || []);
+          setError(null);
         })
-        .catch(() => { setJobs(MOCK_WORKFLOW_JOBS); setUsingMock(true); });
+        .catch((err) => {
+          setJobs([]);
+          setError(err.message || 'Failed to load magazine jobs');
+        })
+        .finally(() => setLoading(false));
+      m.magazine?.listIssues?.()
+        .then((data) => setIssues(data.items || []))
+        .catch(() => setIssues([]));
     });
   }, []);
 
@@ -48,21 +53,6 @@ export default function MagazinePage() {
       if (adminApi.magazine?.generateIssue) {
         const job = await adminApi.magazine.generateIssue({ theme, quarter, year });
         setJobs((prev) => [job, ...prev]);
-      } else {
-        const newJob = {
-          id: `job-${Date.now()}`,
-          theme,
-          quarter,
-          year,
-          status: 'collecting',
-          progress: 5,
-          steps: MAGAZINE_WORKFLOW_STEPS.map((s, i) => ({
-            ...s,
-            status: i === 0 ? 'processing' : 'pending',
-          })),
-          createdAt: new Date().toISOString(),
-        };
-        setJobs((prev) => [newJob, ...prev]);
       }
     } finally {
       setGenerating(false);
@@ -91,9 +81,9 @@ export default function MagazinePage() {
         </p>
       </div>
 
-      {usingMock && (
-        <p className="text-xs px-3 py-2 rounded-lg bg-amber-500/10 text-amber-300 border border-amber-500/20">
-          Showing demo magazine workflow — connect backend for live editorial jobs.
+      {error && (
+        <p className="text-xs px-3 py-2 rounded-lg bg-red-500/10 text-red-300 border border-red-500/20">
+          {error}
         </p>
       )}
 

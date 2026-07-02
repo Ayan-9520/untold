@@ -88,7 +88,6 @@ class PublishingCmsService:
     @staticmethod
     def get_overview(db: Session, user: User) -> dict:
         StudioPlatformService.require_permission(db, user, None, "publish.schedule")
-        PublishingCmsService.seed_demo_jobs(db)
         total = db.query(func.count(PublishJob.id)).scalar() or 0
         pending_approval = (
             db.query(func.count(PublishJob.id)).filter(PublishJob.approval_status == "pending").scalar() or 0
@@ -124,7 +123,6 @@ class PublishingCmsService:
         limit: int = 50,
     ) -> list[dict]:
         StudioPlatformService.require_permission(db, user, None, "publish.schedule")
-        PublishingCmsService.seed_demo_jobs(db)
         q = db.query(PublishJob, Production).join(Production, PublishJob.project_id == Production.id)
         if status:
             q = q.filter(PublishJob.status == status)

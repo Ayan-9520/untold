@@ -38,6 +38,13 @@ class SubscribeResponse(BaseModel):
     checkout: dict | None = None
 
 
+class UserSubscriptionResponse(BaseModel):
+    plan: str
+    status: str
+    started_at: datetime | None = None
+    expires_at: datetime | None = None
+
+
 class CreateOrderRequest(BaseModel):
     plan_slug: str
     currency: str = "USD"

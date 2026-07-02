@@ -24,7 +24,7 @@ from app.core.security import (
     get_password_hash,
 )
 from app.domain.security.audit import log_audit_event
-from app.domain.security.compliance import compliance_report
+from app.domain.compliance.reports import full_compliance_report
 from app.domain.security.encryption import decrypt_value, encrypt_value
 from app.domain.security.ip_rules import check_ip_access
 from app.domain.security.mfa import (
@@ -120,7 +120,7 @@ class EnterpriseSecurityService:
         StudioAdminService._require_admin(db, user)
         EnterpriseSecurityService.ensure_defaults(db, user)
         day_ago = datetime.now(timezone.utc) - timedelta(hours=24)
-        compliance = compliance_report(db)
+        compliance = full_compliance_report(db)
         return {
             "mfa_enrolled_users": db.query(EnterpriseMfaEnrollment).filter(EnterpriseMfaEnrollment.enabled.is_(True)).count(),
             "active_sessions": db.query(EnterpriseSession).filter(
@@ -138,7 +138,7 @@ class EnterpriseSecurityService:
     @staticmethod
     def get_compliance(db: Session, user: User) -> dict:
         StudioAdminService._require_admin(db, user)
-        return compliance_report(db)
+        return full_compliance_report(db)
 
     @staticmethod
     def get_rbac(db: Session, user: User) -> list[dict]:
@@ -270,6 +270,11 @@ class EnterpriseSecurityService:
         if not client_id:
             raise BadRequestError("OAuth client_id not configured")
 
+        settings = get_settings()
+        allowlist = settings.sso_redirect_uri_allowlist
+        if allowlist and redirect_uri not in allowlist:
+            raise BadRequestError("redirect_uri is not allowed")
+
         params = {
             "client_id": client_id,
             "response_type": "code",
@@ -307,6 +312,10 @@ class EnterpriseSecurityService:
         token_url = provider.token_url
         if not token_url or not client_id:
             raise BadRequestError("OAuth not fully configured")
+
+        allowlist = settings.sso_redirect_uri_allowlist
+        if allowlist and redirect_uri not in allowlist:
+            raise BadRequestError("redirect_uri is not allowed")
 
         with httpx.Client(timeout=15.0) as client:
             token_resp = client.post(

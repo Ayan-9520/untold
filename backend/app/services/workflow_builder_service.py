@@ -258,6 +258,32 @@ class WorkflowBuilderService:
         return WorkflowBuilderService._version_dict(version)
 
     @staticmethod
+    def restore_version(db: Session, user: User, definition_id: int, version_id: int) -> dict:
+        """Set current version to a historical snapshot (creates new version copy)."""
+        StudioPlatformService.require_permission(db, user, None, "ai.generate")
+        version = (
+            db.query(WorkflowDefinitionVersion)
+            .filter(
+                WorkflowDefinitionVersion.id == version_id,
+                WorkflowDefinitionVersion.definition_id == definition_id,
+            )
+            .first()
+        )
+        if not version:
+            raise NotFoundError("Workflow version")
+        from app.schemas.workflow_builder import WorkflowGraphSchema
+
+        return WorkflowBuilderService.create_version(
+            db,
+            user,
+            definition_id,
+            WorkflowVersionCreate(
+                graph=WorkflowGraphSchema(**version.graph),
+                changelog=f"Restored from v{version.version}",
+            ),
+        )
+
+    @staticmethod
     def clone_template(db: Session, user: User, template_id: int, *, name: str | None = None) -> dict:
         StudioPlatformService.require_permission(db, user, None, "ai.generate")
         tpl = db.query(WorkflowDefinition).filter(WorkflowDefinition.id == template_id).first()

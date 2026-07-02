@@ -1,55 +1,40 @@
-import { api } from './client';
-import {
-  magazineCatalog,
-  getMagazineIssues,
-  getIssueById,
-  getFeaturedIssue,
-  getFreeSampleIssue,
-  MOCK_WORKFLOW_JOBS,
-} from '../data/magazineCatalog';
+import client from './client';
+
+const DEFAULT_COVER = 'https://images.unsplash.com/photo-1461896836934-ffe607ba7a38?w=1200&q=80';
+
+export function normalizeIssue(issue) {
+  if (!issue) return null;
+  return {
+    ...issue,
+    id: issue.id || issue.issue_slug,
+    coverImage: issue.coverImage || issue.cover_image_url || DEFAULT_COVER,
+    pageCount: issue.pageCount ?? issue.page_count ?? 48,
+    sections: issue.sections || [],
+    sample: issue.sample ?? issue.access === 'free',
+  };
+}
 
 export const magazineApi = {
   async listIssues() {
-    try {
-      const { data } = await api.get('/magazine/issues');
-      return { data: data.items || data };
-    } catch {
-      return { data: getMagazineIssues(), source: 'mock' };
-    }
+    const { data } = await client.get('/magazine/issues');
+    const items = (data.items || data).map(normalizeIssue);
+    return { data: items };
   },
 
   async getIssue(id) {
-    try {
-      const { data } = await api.get(`/magazine/issues/${id}`);
-      return { data };
-    } catch {
-      return { data: getIssueById(id), source: 'mock' };
-    }
+    const { data } = await client.get(`/magazine/issues/${id}`);
+    return { data: normalizeIssue(data) };
   },
 
   async getFeatured() {
-    try {
-      const { data } = await api.get('/magazine/featured');
-      return { data };
-    } catch {
-      return { data: getFeaturedIssue(), source: 'mock' };
-    }
+    const { data } = await client.get('/magazine/featured');
+    return { data: normalizeIssue(data) };
   },
 
   async getFreeSample() {
-    return { data: getFreeSampleIssue(), source: 'mock' };
+    const { data } = await client.get('/magazine/free-sample');
+    return { data: normalizeIssue(data) };
   },
-};
-
-export const magazineAdminApi = {
-  listJobs: () =>
-    import('./adminApi').then((m) => m.magazine?.listJobs?.() || Promise.resolve({ items: MOCK_WORKFLOW_JOBS })),
-  generateIssue: (payload) =>
-    import('./adminApi').then((m) => m.magazine?.generateIssue?.(payload)),
-  approveIssue: (jobId) =>
-    import('./adminApi').then((m) => m.magazine?.approveIssue?.(jobId)),
-  publishIssue: (jobId) =>
-    import('./adminApi').then((m) => m.magazine?.publishIssue?.(jobId)),
 };
 
 export default magazineApi;

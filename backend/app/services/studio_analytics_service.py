@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import csv
 import io
-import math
 from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import func
@@ -16,52 +15,57 @@ from app.services.analytics_service import AnalyticsService
 from app.services.revenue_service import RevenueService
 from app.services.studio_platform_service import StudioPlatformService
 
-_TRAFFIC = [
-    ("Organic Search", 34.2),
-    ("Direct", 22.8),
-    ("YouTube", 18.5),
-    ("Social", 14.1),
-    ("Referral", 10.4),
-]
-_COUNTRIES = [
-    ("United States", 28.4),
-    ("India", 22.1),
-    ("United Kingdom", 9.8),
-    ("Brazil", 7.2),
-    ("Germany", 5.6),
-    ("Other", 26.9),
-]
-_DEVICES = [
-    ("Mobile", 58.3),
-    ("Desktop", 32.1),
-    ("Tablet", 6.4),
-    ("TV", 3.2),
-]
-
 
 class StudioAnalyticsService:
     @staticmethod
     def _breakdown(items: list[tuple[str, float]]) -> list[dict]:
+        if not items:
+            return []
         total = sum(v for _, v in items) or 1
         return [{"label": k, "value": v, "pct": round(v / total * 100, 1)} for k, v in items]
 
     @staticmethod
-    def _growth_series(base_views: int, base_subs: int, days: int = 30) -> list[dict]:
-        now = datetime.now(timezone.utc).date()
+    def _growth_series(db: Session, *, days: int = 30) -> list[dict]:
+        from app.models import Analytics, AnalyticsEventType
+
+        now = datetime.now(timezone.utc)
+        start = now - timedelta(days=days - 1)
+        rows = (
+            db.query(func.date(Analytics.created_at), func.count(Analytics.id))
+            .filter(
+                Analytics.created_at >= start,
+                Analytics.event_type.in_([AnalyticsEventType.VIEW, AnalyticsEventType.PLAY]),
+            )
+            .group_by(func.date(Analytics.created_at))
+            .all()
+        )
+        by_date = {str(d): int(c) for d, c in rows}
+        subs_total = (
+            db.query(func.count(Subscription.id))
+            .filter(Subscription.status == SubscriptionStatus.ACTIVE)
+            .scalar()
+            or 0
+        )
         series = []
         for i in range(days - 1, -1, -1):
-            d = now - timedelta(days=i)
-            factor = 0.85 + (days - i) / days * 0.3
-            noise = 1 + math.sin(i * 0.5) * 0.08
-            views = int((base_views / days) * factor * noise)
+            d = (now - timedelta(days=i)).date()
+            key = str(d)
+            views = int(by_date.get(key, 0))
             series.append({
                 "date": d.isoformat(),
-                "views": max(views, 100),
-                "watch_time_hours": round(views * 0.42 / 60, 1),
+                "views": views,
+                "watch_time_hours": round(views * 0.38 / 60, 1),
                 "revenue": round(views * 0.0032, 2),
-                "subscribers": base_subs + int((days - i) * 12.5),
+                "subscribers": subs_total,
             })
         return series
+
+    @staticmethod
+    def _traffic_from_events(events_by_type: dict[str, int]) -> list[dict]:
+        if not events_by_type:
+            return []
+        items = [(label.replace("_", " ").title(), float(count)) for label, count in events_by_type.items()]
+        return StudioAnalyticsService._breakdown(items)
 
     @staticmethod
     def get_overview(db: Session, user: User) -> dict:
@@ -69,10 +73,10 @@ class StudioAnalyticsService:
         summary = AnalyticsService.get_summary(db)
         revenue = RevenueService.get_summary(db)
 
-        views = int(summary.total_views) or 284_500
-        subs = int(summary.active_subscriptions) or 12_840
-        watch_hours = round(views * 0.38 / 60, 1)
-        ctr = 6.8
+        views = int(summary.total_views or 0)
+        subs = int(summary.active_subscriptions or 0)
+        watch_hours = round(views * 0.38 / 60, 1) if views else 0.0
+        ctr = round((summary.events_last_7d / views * 100), 2) if views and summary.events_last_7d else 0.0
 
         top_videos = (
             db.query(Video.id, Video.title, Video.views_count)
@@ -81,12 +85,6 @@ class StudioAnalyticsService:
             .limit(10)
             .all()
         )
-        if not top_videos:
-            top_videos = [
-                (1, "UNTOLD: The Revolution", 48200),
-                (2, "UNTOLD: Rise of Dhoni", 39100),
-                (3, "UNTOLD: Messi vs Ronaldo", 35600),
-            ]
 
         creator_rows = (
             db.query(Production.assignee, func.count(Production.id), func.sum(Production.sources_count))
@@ -96,48 +94,50 @@ class StudioAnalyticsService:
             .all()
         )
         top_creators = [
-            {"name": r[0], "projects": r[1], "total_views": int((r[2] or 0) * 1200)}
+            {"name": r[0] or "Unassigned", "projects": r[1], "total_views": int((r[2] or 0) * 1200)}
             for r in creator_rows
-        ] or [
-            {"name": "Research Desk", "projects": 4, "total_views": 92000},
-            {"name": "Writers Room", "projects": 3, "total_views": 78000},
         ]
+
+        prev_week_views = max(views - summary.events_last_7d, 0)
+        views_growth = (
+            round((summary.events_last_7d / prev_week_views) * 100, 1) if prev_week_views else 0.0
+        )
 
         return {
             "views": views,
             "watch_time_hours": watch_hours,
             "ctr": ctr,
-            "revenue": revenue.mrr * 12 if revenue.mrr else 148_200.0,
+            "revenue": revenue.arr,
             "subscribers": subs,
-            "subscriber_growth_pct": 8.4,
-            "views_growth_pct": 14.2,
-            "traffic_sources": StudioAnalyticsService._breakdown(_TRAFFIC),
-            "countries": StudioAnalyticsService._breakdown(_COUNTRIES),
-            "devices": StudioAnalyticsService._breakdown(_DEVICES),
+            "subscriber_growth_pct": 0.0,
+            "views_growth_pct": views_growth,
+            "traffic_sources": StudioAnalyticsService._traffic_from_events(summary.events_by_type),
+            "countries": [],
+            "devices": [],
             "top_videos": [
                 {
-                    "id": v.id if hasattr(v, "id") else v[0],
-                    "title": v.title if hasattr(v, "title") else v[1],
-                    "views": v.views_count if hasattr(v, "views_count") else v[2],
-                    "watch_time_hours": round((v.views_count if hasattr(v, "views_count") else v[2]) * 0.35 / 60, 1),
-                    "ctr": round(5.5 + (i % 4) * 0.8, 1),
+                    "id": v.id,
+                    "title": v.title,
+                    "views": int(v.views_count or 0),
+                    "watch_time_hours": round((v.views_count or 0) * 0.35 / 60, 1),
+                    "ctr": ctr,
                 }
-                for i, v in enumerate(top_videos)
+                for v in top_videos
             ],
             "top_creators": top_creators,
-            "growth": StudioAnalyticsService._growth_series(views, subs),
+            "growth": StudioAnalyticsService._growth_series(db),
         }
 
     @staticmethod
     def get_realtime(db: Session, user: User) -> dict:
         StudioPlatformService.require_permission(db, user, None, "analytics.read")
         summary = AnalyticsService.get_summary(db)
-        hour_factor = max(1, summary.events_last_24h // 24)
+        hour_factor = max(0, summary.events_last_24h)
         return {
-            "active_viewers": 340 + (hour_factor % 120),
-            "views_last_hour": hour_factor * 3 + 420,
-            "plays_last_hour": hour_factor * 2 + 280,
-            "revenue_today": round(hour_factor * 0.42 + 1240.5, 2),
+            "active_viewers": hour_factor,
+            "views_last_hour": max(0, hour_factor // 24),
+            "plays_last_hour": max(0, hour_factor // 36),
+            "revenue_today": round(RevenueService.get_summary(db).mrr / 30, 2),
             "updated_at": datetime.now(timezone.utc),
         }
 

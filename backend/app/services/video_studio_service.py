@@ -22,6 +22,7 @@ from app.models.studio_platform import (
     StudioNotification,
 )
 from app.schemas.video_studio import VideoGenerateCreate
+from app.services.generation_telemetry_service import finalize_generation_success
 from app.services.studio_platform_service import StudioPlatformService
 
 _VIDEO_MODULE = AIGenerationModule.VIDEO
@@ -275,6 +276,10 @@ class VideoStudioService:
                 result.r2_key,
                 meta,
                 label="v1",
+            )
+
+            finalize_generation_success(
+                db, gen, started_at=gen.started_at, output_text=result.output_text, meta=meta,
             )
 
             if gen.created_by_id:

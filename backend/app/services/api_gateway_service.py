@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 
 from app.core.exceptions import BadRequestError, NotFoundError
 from app.domain.gateway.scopes import DEFAULT_API_KEY_SCOPES, GATEWAY_SCOPES, RATE_LIMIT_TIERS, WEBHOOK_EVENTS
+from app.domain.gateway.webhook_validation import validate_webhook_url
 from app.domain.gateway.webhooks import deliver_gateway_webhooks
 from app.models import User
 from app.models.studio_platform import ApiGatewayUsageLog, ApiGatewayWebhook, ApiGatewayWebhookDelivery, StudioApiKey
@@ -32,9 +33,13 @@ class ApiGatewayService:
         ip_address: str | None = None,
         user_agent: str | None = None,
         error_code: str | None = None,
+        environment: str = "production",
         commit: bool = True,
     ) -> None:
         request_id = auth.request_id or str(uuid.uuid4())
+        env = environment
+        if auth.api_key and getattr(auth.api_key, "environment", None):
+            env = auth.api_key.environment
         row = ApiGatewayUsageLog(
             api_key_id=auth.api_key.id if auth.api_key else None,
             user_id=auth.user.id,
@@ -48,6 +53,7 @@ class ApiGatewayService:
             user_agent=(user_agent or "")[:500] or None,
             request_id=request_id,
             error_code=error_code,
+            environment=env,
         )
         db.add(row)
         if auth.api_key:
@@ -167,6 +173,7 @@ class ApiGatewayService:
             "id": row.id,
             "name": row.name,
             "key_prefix": row.key_prefix,
+            "environment": getattr(row, "environment", None) or "production",
             "permissions": row.permissions or [],
             "scopes": row.scopes or row.permissions or [],
             "rate_limit_tier": row.rate_limit_tier,
@@ -183,7 +190,7 @@ class ApiGatewayService:
         from app.domain.gateway.auth import hash_api_key
 
         StudioAdminService._require_admin(db, user, "admin.manage")
-        secret = f"unt_{secrets.token_urlsafe(32)}"
+        secret = f"unt_live_{secrets.token_urlsafe(32)}"
         prefix = secret[:12]
         key_hash = hash_api_key(secret)
         scopes = data.scopes or data.permissions or DEFAULT_API_KEY_SCOPES
@@ -195,6 +202,7 @@ class ApiGatewayService:
             scopes=scopes,
             rate_limit_tier=data.rate_limit_tier or "standard",
             api_version=data.api_version or "v1",
+            environment="production",
             expires_at=data.expires_at,
             created_by_id=user.id,
         )
@@ -233,6 +241,7 @@ class ApiGatewayService:
         for ev in data.events:
             if ev not in WEBHOOK_EVENTS:
                 raise BadRequestError(f"Unknown webhook event: {ev}")
+        validate_webhook_url(data.url)
         secret = secrets.token_hex(32)
         row = ApiGatewayWebhook(
             user_id=user.id,
@@ -311,6 +320,8 @@ class ApiGatewayService:
             "webhook_events": list(WEBHOOK_EVENTS),
             "openapi_url": "/gateway/openapi.json",
             "graphql_url": "/gateway/graphql",
+            "developer_portal": "/developers",
+            "self_service_api": "/api/v1/developer",
         }
 
     @staticmethod

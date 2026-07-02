@@ -1,20 +1,33 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, Link, Navigate, useNavigate } from 'react-router-dom';
 import SEO from '../components/SEO';
 import Button from '../components/ui/Button';
 import Badge from '../components/ui/Badge';
 import FlipbookViewer from '../components/magazine/FlipbookViewer';
+import Loader from '../components/ui/Loader';
 import { downloadMagazine } from '../api/streaming';
 import { useWebAuth } from '../context/WebAuthContext';
-import { getIssueById, MAGAZINE_SECTIONS } from '../data/magazineCatalog';
+import { MAGAZINE_SECTIONS } from '../data/magazineCatalog';
+import magazineApi from '../api/magazine';
 
 export default function MagazineIssue() {
   const { id } = useParams();
-  const issue = getIssueById(id);
+  const [issue, setIssue] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [view, setView] = useState('read');
   const { user } = useWebAuth();
   const navigate = useNavigate();
 
+  useEffect(() => {
+    if (!id) return;
+    setLoading(true);
+    magazineApi.getIssue(id)
+      .then(({ data }) => setIssue(data))
+      .catch(() => setIssue(null))
+      .finally(() => setLoading(false));
+  }, [id]);
+
+  if (loading) return <Loader fullScreen label="Loading issue" />;
   if (!issue) return <Navigate to="/magazine" replace />;
 
   const sections = issue.sections || [];

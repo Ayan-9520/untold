@@ -15,6 +15,7 @@ from app.domain.studio.enums import AIGenerationModule, AIGenerationStatus, Appr
 from app.models import User
 from app.models.studio_platform import AIGeneration, AISEOVariant, StudioApproval, StudioNotification
 from app.schemas.seo_studio import SEOApprovalRequest, SEOApplyProjectRequest, SEOGenerateCreate, SEOSelectVariantRequest
+from app.services.generation_telemetry_service import finalize_generation_success
 from app.services.studio_platform_service import StudioPlatformService
 
 _SEO_MODULE = AIGenerationModule.SEO
@@ -224,6 +225,10 @@ class SEOStudioService:
             meta["approval_status"] = "none"
             gen.output_meta = meta
             gen.provider = result.provider
+
+            finalize_generation_success(
+                db, gen, started_at=gen.started_at, output_text=result.output_text, meta=meta,
+            )
 
             if gen.created_by_id:
                 db.add(

@@ -1,29 +1,56 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import SEO from '../components/SEO';
 import OriginalSportCard from '../components/originals/OriginalSportCard';
 import ComingSoonCard from '../components/originals/ComingSoonCard';
 import OriginalsFilterBar from '../components/originals/OriginalsFilterBar';
+import Loader from '../components/ui/Loader';
 import {
-  originalsCatalog,
   COMING_SOON_PLACEHOLDERS,
   isComingSoonSport,
-  filterOriginalsCatalog,
-  getOriginalsSportCounts,
 } from '../data/originalsCatalog';
+import { contentApi } from '../api/content';
 import { CONTENT_GRID_CLASS } from '../constants/contentLayout';
 
-const SPORT_COUNTS = getOriginalsSportCounts();
+function filterCatalog(items, sport, format) {
+  let list = items;
+  if (sport && sport !== 'All' && !isComingSoonSport(sport)) {
+    list = list.filter((i) => (i.sport || i.category || '').toLowerCase() === sport.toLowerCase());
+  }
+  if (format && format !== 'All') {
+    list = list.filter((i) => (i.format || '').toLowerCase() === format.toLowerCase());
+  }
+  return list;
+}
+
+function sportCounts(items) {
+  const counts = { All: items.length };
+  items.forEach((i) => {
+    const key = i.sport || i.category || 'Other';
+    counts[key] = (counts[key] || 0) + 1;
+  });
+  return counts;
+}
 
 export default function Originals() {
+  const [catalog, setCatalog] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [activeSport, setActiveSport] = useState('All');
   const [activeFormat, setActiveFormat] = useState('All');
 
+  useEffect(() => {
+    contentApi.getOriginals()
+      .then(({ data }) => setCatalog(data))
+      .catch(() => setCatalog([]))
+      .finally(() => setLoading(false));
+  }, []);
+
   const isComingSoon = isComingSoonSport(activeSport);
   const filtered = useMemo(
-    () => filterOriginalsCatalog(originalsCatalog, activeSport, activeFormat),
-    [activeSport, activeFormat]
+    () => filterCatalog(catalog, activeSport, activeFormat),
+    [catalog, activeSport, activeFormat]
   );
   const comingSoonCards = isComingSoon ? COMING_SOON_PLACEHOLDERS[activeSport] || [] : [];
+  const counts = useMemo(() => sportCounts(catalog), [catalog]);
 
   const handleSportChange = (sport) => {
     setActiveSport(sport);
@@ -34,6 +61,8 @@ export default function Originals() {
     setActiveSport('All');
     setActiveFormat('All');
   };
+
+  if (loading) return <Loader fullScreen label="Loading originals" />;
 
   return (
     <>
@@ -64,7 +93,7 @@ export default function Originals() {
             onFormatChange={setActiveFormat}
             resultCount={filtered.length}
             isComingSoon={isComingSoon}
-            sportCounts={SPORT_COUNTS}
+            sportCounts={counts}
             onClear={clearFilters}
           />
 

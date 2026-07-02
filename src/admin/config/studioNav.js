@@ -26,10 +26,11 @@ export const STUDIO_NAV = [
       { to: studioPath('projects'), icon: FilmIcon, label: 'Projects' },
       { to: studioPath('collaboration'), icon: UsersIcon, label: 'Collaboration' },
       { to: studioPath('ai-cost'), icon: DollarSignIcon, label: 'AI Cost Optimization' },
-      { to: studioPath('marketplace'), icon: GlobeIcon, label: 'Agent Marketplace' },
+      { to: studioPath('marketplace'), icon: GlobeIcon, label: 'Agent Platform' },
       { to: studioPath('plugins'), icon: BookIcon, label: 'Plugin Marketplace' },
       { to: studioPath('api-gateway'), icon: GlobeIcon, label: 'API Gateway' },
       { to: studioPath('security'), icon: UsersIcon, label: 'Enterprise Security' },
+      { to: studioPath('compliance'), icon: BookIcon, label: 'Enterprise Compliance' },
       { to: studioPath('workflows'), icon: FilmIcon, label: 'Workflow Engine' },
       { to: studioPath('pipeline'), icon: FilmIcon, label: 'Quick Pipeline' },
       { to: studioPath('research'), icon: GlobeIcon, label: 'Research' },
@@ -55,6 +56,7 @@ export const STUDIO_NAV = [
   {
     title: 'Originals feedback',
     items: [
+      { to: studioPath('bi'), icon: BarChartIcon, label: 'Business Intelligence' },
       { to: studioPath('analytics'), icon: BarChartIcon, label: 'Viewer Analytics' },
       { to: studioPath('membership'), icon: CreditCardIcon, label: 'Subscriptions' },
       { to: studioPath('revenue'), icon: DollarSignIcon, label: 'Revenue' },

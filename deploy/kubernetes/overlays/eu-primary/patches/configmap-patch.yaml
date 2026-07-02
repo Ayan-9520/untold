@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: untold-config
+  namespace: untold
+data:
+  UNTOLD_REGION: "eu-west-1"
+  UNTOLD_DEPLOYMENT_ROLE: "primary"
+  OTEL_RESOURCE_ATTRIBUTES: "deployment.region=eu-west-1,deployment.role=primary"

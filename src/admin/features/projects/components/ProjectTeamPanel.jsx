@@ -9,7 +9,7 @@ export default function ProjectTeamPanel({ project, onAssign, onRemove, loading 
   const [userList, setUserList] = useState([]);
 
   useEffect(() => {
-    usersApi.list({ limit: 50 }).then((d) => setUserList(d.items || [])).catch(() => {});
+    usersApi.list({ page: 1, page_size: 50 }).then((d) => setUserList(d.items || [])).catch(() => {});
   }, []);
 
   const handleAssign = (e) => {

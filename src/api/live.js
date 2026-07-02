@@ -1,15 +1,7 @@
 import client from './client';
-import {
-  liveCatalog,
-  getFeaturedLiveMatch,
-  getLiveMatches,
-  getLiveMatchById,
-  getAllHighlights,
-  getAllEventUpdates,
-  generateAICommentary,
-} from '../data/liveCatalog';
+import { getWsBase } from '../config/runtime';
 
-const WS_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:8000').replace(/^http/, 'ws');
+const WS_BASE = getWsBase();
 
 export function normalizeMatch(item) {
   if (!item) return null;
@@ -43,108 +35,69 @@ function normalizeList(items = []) {
 
 export const liveApi = {
   async getOverview() {
-    try {
-      const { data } = await client.get('/live');
-      return {
-        featured: normalizeMatch(data.featured),
-        matches: normalizeList(data.matches),
-        source: 'api',
-      };
-    } catch {
-      const matches = getLiveMatches();
-      return {
-        featured: getFeaturedLiveMatch(),
-        matches,
-        source: 'mock',
-      };
-    }
+    const { data } = await client.get('/live');
+    return {
+      featured: normalizeMatch(data.featured),
+      matches: normalizeList(data.matches),
+      source: 'api',
+    };
   },
 
   async getFeatured() {
-    try {
-      const { data } = await client.get('/live/featured');
-      return { data: normalizeMatch(data), source: 'api' };
-    } catch {
-      return { data: getFeaturedLiveMatch(), source: 'mock' };
-    }
+    const { data } = await client.get('/live/featured');
+    return { data: normalizeMatch(data), source: 'api' };
   },
 
   async getMatches(sport) {
-    try {
-      const { data } = await client.get('/live/matches', { params: { sport: sport === 'All' ? undefined : sport } });
-      return { data: normalizeList(data.items), source: 'api' };
-    } catch {
-      return { data: getLiveMatches(sport), source: 'mock' };
-    }
+    const { data } = await client.get('/live/matches', { params: { sport: sport === 'All' ? undefined : sport } });
+    return { data: normalizeList(data.items), source: 'api' };
   },
 
   async getMatch(id) {
-    try {
-      const { data } = await client.get(`/live/matches/${id}`);
-      return { data: normalizeMatch(data), source: 'api' };
-    } catch {
-      return { data: getLiveMatchById(id), source: 'mock' };
-    }
+    const { data } = await client.get(`/live/matches/${id}`);
+    return { data: normalizeMatch(data), source: 'api' };
   },
 
   async getEvents(matchId) {
-    try {
-      const { data } = await client.get(`/live/matches/${matchId}/events`);
-      return { data: data.items || [], source: 'api' };
-    } catch {
-      const match = getLiveMatchById(matchId);
-      return { data: match?.eventUpdates || [], source: 'mock' };
-    }
+    const { data } = await client.get(`/live/matches/${matchId}/events`);
+    return { data: data.items || [], source: 'api' };
   },
 
   async getCommentary(matchId) {
-    try {
-      const { data } = await client.get(`/live/matches/${matchId}/commentary`);
-      const items = (data.items || []).map((c, i) => ({
-        id: c.id || `c-${i}`,
-        text: c.text || c.ai_text,
-        minute: c.minute || c.time,
-        time: c.time || c.minute,
-        type: c.type || 'commentary',
-      }));
-      return { data: items, source: 'api' };
-    } catch {
-      const match = getLiveMatchById(matchId);
-      return { data: match?.commentary || [], source: 'mock' };
-    }
+    const { data } = await client.get(`/live/matches/${matchId}/commentary`);
+    const items = (data.items || []).map((c, i) => ({
+      id: c.id || `c-${i}`,
+      text: c.text || c.ai_text,
+      minute: c.minute || c.time,
+      time: c.time || c.minute,
+      type: c.type || 'commentary',
+    }));
+    return { data: items, source: 'api' };
   },
 
   async getHighlights(limit = 12) {
-    try {
-      const { data } = await client.get('/live/matches');
-      const items = (data.items || []).slice(0, limit);
-      return { data: normalizeList(items), source: 'api' };
-    } catch {
-      return { data: getAllHighlights(limit), source: 'mock' };
-    }
+    const { data } = await client.get('/live/matches', { params: { limit } });
+    const items = (data.items || []).slice(0, limit);
+    return { data: normalizeList(items), source: 'api' };
   },
 
   async getUpdates(limit = 20) {
-    try {
-      const { data: matches } = await this.getMatches();
-      const updates = [];
-      for (const m of matches.slice(0, 5)) {
-        const { data: events } = await this.getEvents(m.id);
-        events.forEach((e, i) => {
-          updates.push({
-            ...e,
-            id: `${m.id}-u${i}`,
-            matchId: m.id,
-            eventName: m.eventName,
-            sport: m.sport,
-            aiText: e.raw,
-          });
+    const { data: matches } = await this.getMatches();
+    const updates = [];
+    for (const m of matches.slice(0, 5)) {
+      const { data: events } = await this.getEvents(m.id);
+      events.forEach((e, i) => {
+        updates.push({
+          ...e,
+          id: `${m.id}-u${i}`,
+          matchId: m.id,
+          eventName: m.eventName,
+          sport: m.sport,
+          aiText: e.raw,
         });
-      }
-      return { data: updates.slice(0, limit), source: 'api' };
-    } catch {
-      return { data: getAllEventUpdates(limit), source: 'mock' };
+      });
     }
+    return { data: updates.slice(0, limit), source: 'api' };
   },
 
   connectLive(onMessage) {
@@ -161,11 +114,10 @@ export const liveApi = {
     return () => ws.close();
   },
 
-  generateCommentary(rawEvent) {
-    return generateAICommentary(rawEvent);
+  async generateCommentary(rawEvent) {
+    const { data } = await client.post('/live/commentary/generate', { raw_event: rawEvent });
+    return data;
   },
-
-  mockCatalog: liveCatalog,
 };
 
 export default liveApi;

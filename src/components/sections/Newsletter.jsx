@@ -1,14 +1,22 @@
 import { useState } from 'react';
+import client from '../api/client';
 
 export default function Newsletter() {
   const [email, setEmail] = useState('');
   const [done, setDone] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!email.trim()) return;
-    setDone(true);
-    setEmail('');
+    setError('');
+    try {
+      await client.post('/newsletter/subscribe', { email: email.trim() });
+      setDone(true);
+      setEmail('');
+    } catch {
+      setError('Unable to subscribe right now. Please try again.');
+    }
   };
 
   return (
@@ -47,6 +55,7 @@ export default function Newsletter() {
             </button>
           </form>
         )}
+        {error && <p className="mt-4 text-sm text-red-400">{error}</p>}
       </div>
     </section>
   );

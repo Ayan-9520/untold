@@ -23,7 +23,9 @@ Date: YYYY-MM-DD
 | [0003](./0003-unified-ai-provider-layer.md) | Unified AI provider layer | Accepted |
 | [0004](./0004-jwt-session-rbac.md) | JWT sessions and studio RBAC | Accepted |
 | [0005](./0005-kubernetes-production-deployment.md) | Kubernetes for production deployment | Accepted |
-| [0006](./0006-celery-async-workers.md) | Celery for async background work | Accepted |
+| [0006](./0006-celery-async-workers.md) | Celery for async background work |
+| [0007](./0007-multi-tenant-saas.md) | Multi-tenant SaaS for Studio | Accepted |
+| [0008](./0008-global-cloudflare-multi-region.md) | Global deployment with Cloudflare | Accepted |
 
 ## When to write an ADR
 

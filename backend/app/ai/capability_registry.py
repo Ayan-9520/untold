@@ -85,11 +85,18 @@ class CapabilityRegistry:
     def resolve(self, capability: str, preferred: str | None = None, *, module: str | None = None) -> Any:
         providers = self._providers.get(capability, {})
         seen: set[str] = set()
+        cfg = get_ai_config()
+        from app.core.config import get_settings
+
+        settings = get_settings()
+        demo_ids = {"demo", "media_stub"}
 
         for pid in self._resolution_order(capability, preferred):
             if pid in seen:
                 continue
             seen.add(pid)
+            if settings.is_production and not settings.ai_allow_demo_in_production and pid in demo_ids:
+                continue
             provider = providers.get(pid)
             if not provider:
                 continue

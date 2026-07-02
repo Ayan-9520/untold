@@ -1,48 +1,73 @@
-import { searchVideos, videoCatalog } from '../data/videoCatalog';
-import { searchEvents } from '../data/eventsCatalog';
-import { searchNews } from '../data/newsCatalog';
+import { api } from '../api/client';
+import newsApi, { normalizeArticle } from '../api/news';
+import { fetchEventsOverview } from '../api/events';
 import { VERTICALS } from '../data/verticalCatalog';
 
-/**
- * Unified platform search — videos, events, news, people, verticals, topics
- */
-export function exploreSearch(query) {
-  const q = query.trim().toLowerCase();
-  if (!q) return { videos: [], events: [], news: [], athletes: [], verticals: [], topics: [], companies: [] };
+function mapApiVideo(v) {
+  return {
+    id: v.id,
+    slug: v.slug,
+    title: v.title,
+    description: v.description,
+    sport: v.category?.name || v.sport,
+    category: v.category?.slug || v.category,
+    categoryName: v.category?.name,
+    vertical: v.vertical,
+    format: v.video_type,
+    duration: v.duration,
+    year: v.year,
+    rating: v.rating,
+    image: v.image_url,
+    thumbnail: v.image_url,
+    trailerUrl: v.video_url,
+    featured: v.is_featured,
+    trending: v.is_trending,
+    views: v.views_count,
+    genres: v.genres || [],
+  };
+}
 
-  const videos = searchVideos(q);
-  const events = searchEvents(q);
-  const news = searchNews(q);
+export async function fetchVideoCatalog(params = {}) {
+  const { items } = await api.videos.list({ page_size: 100, ...params });
+  return items.map(mapApiVideo);
+}
 
-  const athletes = videoCatalog
-    .filter((v) =>
-      v.category === 'legends' &&
-      (v.title.toLowerCase().includes(q) || v.sport?.toLowerCase().includes(q))
-    )
-    .slice(0, 6)
-    .map((v) => ({ id: v.id, name: v.title, sport: v.sport, image: v.image, type: 'person' }));
+export async function exploreSearchAsync(query) {
+  const q = query.trim();
+  if (!q) {
+    return { videos: [], events: [], news: [], athletes: [], verticals: [], topics: [], companies: [] };
+  }
+
+  const [videoRes, newsRes, eventsRes] = await Promise.all([
+    api.videos.search(q).catch(() => ({ items: [] })),
+    newsApi.list({ search: q, page_size: 10 }).catch(() => ({ items: [] })),
+    fetchEventsOverview({ search: q }).catch(() => ({ items: [] })),
+  ]);
+
+  const videos = (videoRes.items || []).map(mapApiVideo);
+  const news = (newsRes.items || []).map(normalizeArticle);
+  const events = (eventsRes.items || []).map((e) => ({
+    id: e.id,
+    title: e.title,
+    sport: e.sport,
+    status: e.status,
+    type: 'event',
+  }));
 
   const verticals = VERTICALS.filter(
-    (v) => v.label.toLowerCase().includes(q) || v.id.includes(q)
+    (v) => v.label.toLowerCase().includes(q.toLowerCase()) || v.id.includes(q.toLowerCase())
   ).map((v) => ({ id: v.id, name: v.label, explore: v.explore, type: 'vertical' }));
 
   const topics = [...new Set(
-    videoCatalog.flatMap((v) => v.genres || []).filter((g) => g.toLowerCase().includes(q))
+    videos.flatMap((v) => v.genres || []).filter((g) => g.toLowerCase().includes(q.toLowerCase()))
   )].slice(0, 6).map((name) => ({ id: name, name, type: 'topic' }));
 
-  const companies = videoCatalog
-    .filter((v) =>
-      v.vertical === 'business' ||
-      v.title.toLowerCase().includes('amazon') ||
-      v.title.toLowerCase().includes('tesla') ||
-      v.title.toLowerCase().includes('openai') ||
-      v.title.toLowerCase().includes('lvmh')
-    )
-    .filter((v) => v.title.toLowerCase().includes(q) || v.description?.toLowerCase().includes(q))
-    .slice(0, 5)
-    .map((v) => ({ id: v.id, name: v.title.replace(/^UNTOLD:\s*/i, ''), image: v.image, type: 'company' }));
+  const athletes = videos
+    .filter((v) => v.category === 'legends')
+    .slice(0, 6)
+    .map((v) => ({ id: v.id, name: v.title, sport: v.sport, image: v.image, type: 'person' }));
 
-  return { videos, events, news, athletes, verticals, topics, companies };
+  return { videos, events, news, athletes, verticals, topics, companies: [] };
 }
 
 export function filterVideosBySport(videos, sport) {
@@ -60,25 +85,25 @@ export function sortVideos(videos, sortBy) {
     case 'popular':
     default:
       return list.sort((a, b) => {
-        const score = (v) => (v.trending ? 2 : 0) + (v.featured ? 1 : 0);
+        const score = (v) => (v.trending ? 2 : 0) + (v.featured ? 1 : 0) + (v.views || 0) / 10000;
         return score(b) - score(a) || (b.year || 0) - (a.year || 0);
       });
   }
 }
 
-export function getRecommendedVideos(limit = 8) {
-  const trending = videoCatalog.filter((v) => v.trending);
-  const pool = trending.length >= limit ? trending : videoCatalog;
+export function getRecommendedVideos(catalog, limit = 8) {
+  const trending = catalog.filter((v) => v.trending);
+  const pool = trending.length >= limit ? trending : catalog;
   return pool.slice(0, limit);
 }
 
-export function getTrendingVideos(limit = 8) {
-  return videoCatalog.filter((v) => v.trending || v.featured).slice(0, limit);
+export function getTrendingVideos(catalog, limit = 8) {
+  return catalog.filter((v) => v.trending || v.featured).slice(0, limit);
 }
 
-export function globalSearch(query, limits = {}) {
+export async function globalSearch(query, limits = {}) {
   const { videos = 6, events = 3, news = 3, people = 4, verticals = 4, topics = 4, companies = 3 } = limits;
-  const all = exploreSearch(query);
+  const all = await exploreSearchAsync(query);
   return {
     videos: all.videos.slice(0, videos),
     events: all.events.slice(0, events),

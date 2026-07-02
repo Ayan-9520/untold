@@ -1,19 +1,28 @@
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import SectionHeader from '../ui/SectionHeader';
 import ContentRow from '../ui/ContentRow';
 import EventCard from '../events/EventCard';
 import LiveEventCard from '../events/LiveEventCard';
-import { getEventsByStatus, getFeaturedEvent } from '../../data/eventsCatalog';
+import { fetchEventsOverview } from '../../api/events';
 
 export default function EventsRow() {
-  const live = getEventsByStatus('live').slice(0, 2);
-  const upcoming = getEventsByStatus('upcoming').slice(0, 4);
-  const featured = getFeaturedEvent();
+  const [items, setItems] = useState([]);
+  const [featured, setFeatured] = useState(null);
 
-  const items = [
-    ...live.map((e) => ({ type: 'live', event: e })),
-    ...upcoming.map((e) => ({ type: 'upcoming', event: e })),
-  ].slice(0, 6);
+  useEffect(() => {
+    fetchEventsOverview()
+      .then((data) => {
+        const live = data.items.filter((e) => e.status === 'live').slice(0, 2);
+        const upcoming = data.items.filter((e) => e.status === 'upcoming').slice(0, 4);
+        setFeatured(data.featured);
+        setItems([
+          ...live.map((e) => ({ type: 'live', event: e })),
+          ...upcoming.map((e) => ({ type: 'upcoming', event: e })),
+        ].slice(0, 6));
+      })
+      .catch(() => setItems([]));
+  }, []);
 
   if (items.length === 0) return null;
 

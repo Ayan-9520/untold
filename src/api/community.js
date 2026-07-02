@@ -1,73 +1,60 @@
 import client from './client';
-import {
-  FAN_DNA_DEFAULT,
-  DEBATE_ARENAS,
-  FAN_WARS,
-  PREDICTION_EVENTS,
-  PREDICTION_LEADERBOARD,
-} from '../data/fanCatalog';
+
+function normalizeFanWar(war) {
+  return {
+    id: war.id,
+    title: war.title,
+    sport: war.sport,
+    status: war.status,
+    teamA: war.teamA || war.team_a,
+    teamB: war.teamB || war.team_b,
+  };
+}
+
+function normalizeDebate(debate) {
+  return {
+    ...debate,
+    optionA: debate.optionA || debate.option_a,
+    optionB: debate.optionB || debate.option_b,
+  };
+}
 
 export const communityApi = {
   async getFanDNA() {
-    try {
-      const { data } = await client.get('/community/fan-dna');
-      return data;
-    } catch {
-      return FAN_DNA_DEFAULT;
-    }
+    const { data } = await client.get('/community/fan-dna');
+    return data;
   },
 
   async getDebates() {
-    try {
-      const { data } = await client.get('/community/debates');
-      return data.items || DEBATE_ARENAS;
-    } catch {
-      return DEBATE_ARENAS;
-    }
+    const { data } = await client.get('/community/debates');
+    return (data.items || []).map(normalizeDebate);
   },
 
   async getFanWars() {
-    try {
-      const { data } = await client.get('/community/fan-wars');
-      return data.items || FAN_WARS;
-    } catch {
-      return FAN_WARS;
-    }
+    const { data } = await client.get('/community/fan-wars');
+    return (data.items || []).map(normalizeFanWar);
   },
 
   async voteFanWar(warId, side) {
-    try {
-      const { data } = await client.post('/community/fan-wars/vote', { war_id: warId, side });
-      return data;
-    } catch {
-      return { ok: true, war_id: warId, side };
-    }
+    const { data } = await client.post('/community/fan-wars/vote', { war_id: warId, side });
+    return data;
   },
 
   async getPredictions() {
-    try {
-      const { data } = await client.get('/community/predictions');
-      return data;
-    } catch {
-      return { events: PREDICTION_EVENTS, leaderboard: PREDICTION_LEADERBOARD };
-    }
+    const { data } = await client.get('/community/predictions');
+    return {
+      events: data.events || [],
+      leaderboard: data.leaderboard || [],
+    };
   },
 
   async submitPrediction(eventId, answers) {
-    try {
-      const { data } = await client.post('/community/predictions', { event_id: eventId, answers });
-      return data;
-    } catch {
-      return { ok: true, event_id: eventId, points_earned: 50 };
-    }
+    const { data } = await client.post('/community/predictions', { event_id: eventId, answers });
+    return data;
   },
 
   async getLeaderboard() {
-    try {
-      const { data } = await client.get('/community/leaderboard');
-      return data.items || PREDICTION_LEADERBOARD;
-    } catch {
-      return PREDICTION_LEADERBOARD;
-    }
+    const { data } = await client.get('/community/leaderboard');
+    return data.items || [];
   },
 };

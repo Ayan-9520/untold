@@ -46,7 +46,17 @@ export default function SearchBar({ className = '' }) {
   }, [open]);
 
   useEffect(() => {
-    setData(query.trim() ? globalSearch(query) : null);
+    if (!query.trim()) {
+      setData(null);
+      return;
+    }
+    let cancelled = false;
+    globalSearch(query).then((result) => {
+      if (!cancelled) setData(result);
+    }).catch(() => {
+      if (!cancelled) setData({ videos: [], events: [], news: [], people: [], verticals: [], topics: [], companies: [] });
+    });
+    return () => { cancelled = true; };
   }, [query]);
 
   useEffect(() => {

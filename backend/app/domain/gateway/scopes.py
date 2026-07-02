@@ -21,6 +21,12 @@ RATE_LIMIT_TIERS: dict[str, dict] = {
     "enterprise": {"label": "Enterprise", "limit": "2000/minute", "burst": 200},
 }
 
+DEVELOPER_ACCOUNT_TIERS: dict[str, dict] = {
+    "free": {"label": "Free", "max_active_keys": 3, "allowed_rate_tiers": frozenset({"free"})},
+    "standard": {"label": "Standard", "max_active_keys": 10, "allowed_rate_tiers": frozenset({"free", "standard"})},
+    "enterprise": {"label": "Enterprise", "max_active_keys": 50, "allowed_rate_tiers": frozenset({"free", "standard", "enterprise"})},
+}
+
 SUPPORTED_VERSIONS = ("v1", "v2")
 DEFAULT_VERSION = "v1"
 

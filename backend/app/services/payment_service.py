@@ -175,8 +175,8 @@ class PaymentService:
 
     @staticmethod
     def _verify_razorpay(payment: Payment, order_id: str | None, payment_id: str | None, signature: str | None) -> None:
-        if signature == "webhook":
-            return
+        if settings.is_production and not settings.razorpay_key_secret:
+            raise BadRequestError("Razorpay is not configured")
         if not settings.razorpay_key_secret:
             return
         if not all([order_id, payment_id, signature]):
@@ -222,7 +222,15 @@ class PaymentService:
 
             stripe.api_key = settings.stripe_secret_key
             event = stripe.Webhook.construct_event(payload, signature, settings.stripe_webhook_secret)
+        elif settings.is_production:
+            from app.core.exceptions import UnauthorizedError
+
+            raise UnauthorizedError("Stripe webhook signature verification is required in production")
         else:
+            if not signature:
+                from app.core.exceptions import UnauthorizedError
+
+                raise UnauthorizedError("Stripe webhook signature required")
             event = json.loads(payload)
 
         if event.get("type") == "payment_intent.succeeded":
@@ -239,7 +247,26 @@ class PaymentService:
         return {"status": "ok"}
 
     @staticmethod
-    def handle_razorpay_webhook(db: Session, payload: dict) -> dict:
+    def handle_razorpay_webhook(db: Session, payload: dict, *, body: bytes | None = None, signature: str | None = None) -> dict:
+        if settings.is_production:
+            if not settings.razorpay_webhook_secret:
+                from app.core.exceptions import UnauthorizedError
+
+                raise UnauthorizedError("Razorpay webhook secret is required in production")
+            if not body or not signature:
+                from app.core.exceptions import UnauthorizedError
+
+                raise UnauthorizedError("Razorpay webhook signature required")
+            import razorpay
+
+            client = razorpay.Client(auth=(settings.razorpay_key_id, settings.razorpay_key_secret))
+            client.utility.verify_webhook_signature(body.decode() if isinstance(body, bytes) else body, signature, settings.razorpay_webhook_secret)
+        elif body and signature and settings.razorpay_webhook_secret:
+            import razorpay
+
+            client = razorpay.Client(auth=(settings.razorpay_key_id, settings.razorpay_key_secret))
+            client.utility.verify_webhook_signature(body.decode() if isinstance(body, bytes) else body, signature, settings.razorpay_webhook_secret)
+
         event = payload.get("event", "")
         if event == "payment.captured":
             entity = payload.get("payload", {}).get("payment", {}).get("entity", {})
@@ -255,6 +282,6 @@ class PaymentService:
                         payment.id,
                         order_id=order_id,
                         payment_external_id=entity.get("id"),
-                        signature="webhook",
+                        signature=signature,
                     )
         return {"status": "ok"}

@@ -4,7 +4,6 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.core.cache import cache_get, cache_key, cache_set
-from app.core.cache import cache_get, cache_key, cache_set
 from app.core.deps import get_current_admin, get_optional_user
 from app.db.session import get_db
 from app.models import User
@@ -13,7 +12,6 @@ from app.schemas.video import VideoCreateRequest, VideoListParams, VideoResponse
 from app.services.video_service import VideoService
 
 router = APIRouter(tags=["Videos"])
-_TRENDING_CACHE_TTL = 120
 _TRENDING_CACHE_TTL = 120
 
 

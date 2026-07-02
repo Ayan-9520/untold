@@ -10,6 +10,7 @@ from app.schemas.monetization import (
     VerifyPaymentRequest,
     VerifyPaymentResponse,
 )
+from app.services.billing.webhook_service import BillingWebhookService
 from app.services.payment_service import PaymentService
 
 router = APIRouter(prefix="/payments", tags=["Payments"])
@@ -55,10 +56,14 @@ def verify_payment(
 async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
     payload = await request.body()
     signature = request.headers.get("stripe-signature")
-    return PaymentService.handle_stripe_webhook(db, payload, signature)
+    return BillingWebhookService.handle_stripe(db, payload, signature)
 
 
 @webhook_router.post("/razorpay")
 async def razorpay_webhook(request: Request, db: Session = Depends(get_db)):
-    payload = await request.json()
-    return PaymentService.handle_razorpay_webhook(db, payload)
+    import json
+
+    body = await request.body()
+    payload = json.loads(body)
+    signature = request.headers.get("X-Razorpay-Signature")
+    return BillingWebhookService.handle_razorpay(db, payload, body=body, signature=signature)

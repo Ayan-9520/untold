@@ -1,13 +1,33 @@
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import SEO from '../components/SEO';
 import Button from '../components/ui/Button';
 import MagazineCard from '../components/magazine/MagazineCard';
 import Badge from '../components/ui/Badge';
-import { getMagazineIssues, getFeaturedIssue, MAGAZINE_BRAND, MAGAZINE_ACCESS } from '../data/magazineCatalog';
+import Loader from '../components/ui/Loader';
+import { MAGAZINE_BRAND, MAGAZINE_ACCESS } from '../data/magazineCatalog';
+import magazineApi from '../api/magazine';
 
 export default function Magazine() {
-  const featured = getFeaturedIssue();
-  const issues = getMagazineIssues();
+  const [issues, setIssues] = useState([]);
+  const [featured, setFeatured] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    Promise.all([
+      magazineApi.listIssues().then((r) => r.data),
+      magazineApi.getFeatured().then((r) => r.data).catch(() => null),
+    ])
+      .then(([list, feat]) => {
+        setIssues(list);
+        setFeatured(feat || list[0] || null);
+      })
+      .catch(() => setError('Unable to load magazine editions.'))
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) return <Loader fullScreen label="Loading magazine" />;
 
   return (
     <>
@@ -32,6 +52,8 @@ export default function Magazine() {
               designed, and published by UNTOLD&apos;s Magazine Editor AI Agent. Editor-in-Chief approval only.
             </p>
           </div>
+
+          {error && <p className="text-center text-sm text-red-400 mb-8">{error}</p>}
 
           {featured && (
             <div className="relative rounded-2xl overflow-hidden mb-14 min-h-[320px]">
@@ -74,11 +96,15 @@ export default function Magazine() {
           </div>
 
           <h2 className="font-display text-2xl font-bold dark:text-untold-white light:text-black mb-6">All Editions</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-5 sm:gap-6">
-            {issues.map((issue) => (
-              <MagazineCard key={issue.id} issue={issue} />
-            ))}
-          </div>
+          {issues.length === 0 ? (
+            <p className="dark:text-untold-muted light:text-gray-500">No published editions yet.</p>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-5 sm:gap-6">
+              {issues.map((issue) => (
+                <MagazineCard key={issue.id} issue={issue} />
+              ))}
+            </div>
+          )}
         </div>
       </section>
     </>

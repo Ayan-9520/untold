@@ -28,6 +28,9 @@ class GatewayUsageMiddleware(BaseHTTPMiddleware):
             return response
 
         protocol = "graphql" if "/graphql" in request.url.path else "rest"
+        environment = getattr(request.state, "gateway_environment", None)
+        if not environment:
+            environment = "sandbox" if "/gateway/sandbox" in request.url.path else "production"
         db = SessionLocal()
         try:
             ApiGatewayService.log_usage(
@@ -40,6 +43,7 @@ class GatewayUsageMiddleware(BaseHTTPMiddleware):
                 protocol=protocol,
                 ip_address=request.client.host if request.client else None,
                 user_agent=request.headers.get("user-agent"),
+                environment=environment,
             )
         except Exception as exc:
             logger.warning("Failed to log gateway usage: %s", exc)

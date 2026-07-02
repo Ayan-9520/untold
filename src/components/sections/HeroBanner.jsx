@@ -4,7 +4,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Button from '../ui/Button';
 import { PlayIcon, InfoIcon, ChevronLeftIcon, ChevronRightIcon, BookmarkIcon } from '../icons';
 import { heroSlides as defaultSlides } from '../../data/heroSlides';
-import { getVideoById } from '../../data/videoCatalog';
 import { useWatchlist } from '../../context/WatchlistContext';
 import HeroTitle from './HeroTitle';
 import HeroPosterLightbox from './HeroPosterLightbox';
@@ -20,9 +19,9 @@ export default function HeroBanner({ content }) {
   const [paused, setPaused] = useState(false);
 
   const slide = slides[index];
-  const featured = slide.featuredId ? getVideoById(slide.featuredId) : null;
+  const featuredId = slide.featuredId;
   const { isInWatchlist, toggleWatchlist } = useWatchlist();
-  const inList = featured ? isInWatchlist(featured.id) : false;
+  const inList = featuredId ? isInWatchlist(featuredId) : false;
   const fullSrc =
     slide.fullImage || slide.cardImage || slide.posterImage || slide.heroImage;
   const watchLink = slide.featuredId ? `/video/${slide.featuredId}` : '/originals';
@@ -125,11 +124,11 @@ export default function HeroBanner({ content }) {
                 <p className="hero-tagline mt-3 sm:mt-4 mx-auto lg:mx-0">{slide.featuredTagline}</p>
 
                 <div className="hero-ott-meta mt-4 flex flex-wrap gap-2 justify-center lg:justify-start text-xs text-white/75">
-                  {featured?.duration && <span className="hero-ott-badge">{featured.duration}</span>}
-                  {featured?.year && <span className="hero-ott-badge">{featured.year}</span>}
+                  {slide.duration && <span className="hero-ott-badge">{slide.duration}</span>}
+                  {slide.year && <span className="hero-ott-badge">{slide.year}</span>}
                   <span className="hero-ott-badge hero-ott-badge--gold">4K</span>
-                  {featured?.rating && <span className="hero-ott-badge">{featured.rating}</span>}
-                  <span className="hero-ott-badge">{featured?.language || 'English'}</span>
+                  {slide.rating && <span className="hero-ott-badge">{slide.rating}</span>}
+                  <span className="hero-ott-badge">{slide.language || 'English'}</span>
                 </div>
 
                 <div className="mt-5 sm:mt-7 flex flex-wrap gap-3 justify-center lg:justify-start">
@@ -151,12 +150,12 @@ export default function HeroBanner({ content }) {
                       Watch Trailer
                     </Button>
                   </Link>
-                  {featured && (
+                  {featuredId && (
                     <Button
                       variant="secondary"
                       size="lg"
                       icon={<BookmarkIcon className="w-5 h-5" filled={inList} />}
-                      onClick={() => toggleWatchlist(featured)}
+                      onClick={() => toggleWatchlist({ id: featuredId, title: slide.featuredTitle || slide.title, image: slide.cardImage })}
                       className="bg-white/8 text-white hover:bg-white/15 border border-white/15"
                     >
                       {inList ? 'In List' : 'My List'}

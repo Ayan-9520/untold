@@ -33,6 +33,41 @@ os.environ.update(
 BACKEND_ROOT = Path(__file__).resolve().parents[1]
 
 
+def _ensure_test_database() -> None:
+    """Create untold_test if missing (local dev without CI postgres service)."""
+    import psycopg2
+    from urllib.parse import urlparse
+
+    db_url = os.environ.get("DATABASE_URL", "")
+    if not db_url.startswith("postgresql"):
+        return
+    parsed = urlparse(db_url)
+    dbname = (parsed.path or "").lstrip("/")
+    if not dbname:
+        return
+    try:
+        conn = psycopg2.connect(
+            host=parsed.hostname or "localhost",
+            port=parsed.port or 5432,
+            user=parsed.username,
+            password=parsed.password,
+            dbname="postgres",
+        )
+    except Exception:
+        return
+    conn.autocommit = True
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT 1 FROM pg_database WHERE datname = %s", (dbname,))
+            if not cur.fetchone():
+                cur.execute(f'CREATE DATABASE "{dbname}"')
+    finally:
+        conn.close()
+
+
+_ensure_test_database()
+
+
 @pytest.fixture(scope="session", autouse=True)
 def _reset_settings_cache() -> Generator[None, None, None]:
     from app.core.config import get_settings

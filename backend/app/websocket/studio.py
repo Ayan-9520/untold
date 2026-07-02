@@ -83,8 +83,11 @@ def _authenticate_ws(token: str | None) -> User | None:
         user = db.query(User).filter(User.id == user_id, User.is_active.is_(True)).first()
         if not user:
             return None
+        from app.domain.tenancy.context import TenantContextService
+
         if not user.is_admin and not user.studio_role:
-            return None
+            if not TenantContextService.user_has_org_access(db, user.id):
+                return None
         validate_token_session(db, payload)
         return user
     except Exception:

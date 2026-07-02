@@ -13,6 +13,8 @@ from sqlalchemy.orm import Session
 
 
 from app.core.deps import get_current_studio_user
+from app.core.tenant_deps import get_tenant_context
+from app.domain.tenancy.context import TenantContext
 
 from app.db.session import get_db
 
@@ -122,9 +124,17 @@ def list_projects(
     offset: int = Query(0, ge=0),
     db: Session = Depends(get_db),
     user: User = Depends(get_current_studio_user),
+    ctx: TenantContext = Depends(get_tenant_context),
 ):
     items, total = StudioPlatformService.list_projects(
-        db, user, limit=limit, offset=offset, stage=stage, status=status
+        db,
+        user,
+        limit=limit,
+        offset=offset,
+        stage=stage,
+        status=status,
+        organization_id=ctx.organization_id,
+        workspace_id=ctx.workspace_id,
     )
     return ProjectListResponse(
         items=items,
@@ -147,10 +157,17 @@ def create_project(
     db: Session = Depends(get_db),
 
     user: User = Depends(get_current_studio_user),
+    ctx: TenantContext = Depends(get_tenant_context),
 
 ):
 
-    return StudioPlatformService.create_project(db, user, data)
+    return StudioPlatformService.create_project(
+        db,
+        user,
+        data,
+        organization_id=ctx.organization_id,
+        workspace_id=data.workspace_id or ctx.workspace_id,
+    )
 
 
 

@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
 import { studio } from '../api/adminApi';
-import { ACTIVE_PRODUCTIONS } from '../../data/studioData';
 
 /** Map API production to UI shape (compatible with legacy mock). */
 export function mapProduction(p) {
@@ -32,10 +31,7 @@ export function useStudioProductions(stage = null) {
         setLive(true);
       })
       .catch((err) => {
-        const fallback = stage
-          ? ACTIVE_PRODUCTIONS.filter((p) => p.stage === stage)
-          : ACTIVE_PRODUCTIONS;
-        setItems(fallback);
+        setItems([]);
         setLive(false);
         setError(err.message);
       })
@@ -103,7 +99,7 @@ export function useScriptsSummary() {
       })
       .catch(() => {
         setLive(false);
-        setSummary({ in_script: 2, approved: 2 });
+        setSummary({ in_script: 0, approved: 0 });
       });
   }, []);
 

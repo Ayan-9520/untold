@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import SEO from '../components/SEO';
 import EventHeroBanner from '../components/events/EventHeroBanner';
 import ContentFilterBar from '../components/ui/ContentFilterBar';
@@ -9,63 +9,75 @@ import SectionHeader from '../components/ui/SectionHeader';
 import ContentRow from '../components/ui/ContentRow';
 import ShortsCard from '../components/ui/ShortsCard';
 import VideoCard from '../components/ui/VideoCard';
-import {
-  getFeaturedEvent,
-  getEventsBySport,
-  searchEvents,
-  eventShorts,
-  eventStories,
-  eventsCatalog,
-  EVENT_SPORTS,
-} from '../data/eventsCatalog';
-import { toSportOptions } from '../utils/contentFilters';
+import Loader from '../components/ui/Loader';
+import { fetchEventsOverview } from '../api/events';
+import { toSportOptions, getSportsFromItems } from '../utils/contentFilters';
+
+function sportKey(sport) {
+  return sport === 'MMA' || sport === 'Boxing' ? 'Combat' : sport;
+}
 
 export default function Events() {
   const [sport, setSport] = useState('All');
   const [query, setQuery] = useState('');
+  const [overview, setOverview] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  const featured = getFeaturedEvent();
-
-  const filtered = useMemo(() => {
-    let list = getEventsBySport(sport);
-    if (query.trim()) list = searchEvents(query).filter((e) => sport === 'All' || getEventsBySport(sport).some((x) => x.id === e.id));
-    return list;
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError('');
+    fetchEventsOverview({ sport, search: query })
+      .then((data) => {
+        if (!cancelled) setOverview(data);
+      })
+      .catch(() => {
+        if (!cancelled) setError('Unable to load events. Please try again.');
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => { cancelled = true; };
   }, [sport, query]);
 
-  const upcoming = useMemo(() => filtered.filter((e) => e.status === 'upcoming'), [filtered]);
-  const live = useMemo(() => filtered.filter((e) => e.status === 'live'), [filtered]);
-  const completed = useMemo(() => filtered.filter((e) => e.status === 'completed'), [filtered]);
+  const items = overview?.items ?? [];
+  const featured = overview?.featured ?? items[0] ?? null;
+
+  const upcoming = useMemo(() => items.filter((e) => e.status === 'upcoming'), [items]);
+  const live = useMemo(() => items.filter((e) => e.status === 'live'), [items]);
+  const completed = useMemo(() => items.filter((e) => e.status === 'completed'), [items]);
 
   const sportCounts = useMemo(() => {
-    const counts = { All: eventsCatalog.length };
-    eventsCatalog.forEach((e) => {
-      const key = e.sport === 'MMA' || e.sport === 'Boxing' ? 'Combat' : e.sport;
+    const counts = { All: items.length };
+    items.forEach((e) => {
+      const key = sportKey(e.sport);
       counts[key] = (counts[key] || 0) + 1;
     });
     return counts;
-  }, []);
+  }, [items]);
 
-  const filteredShorts = useMemo(() => {
-    if (sport === 'All' && !query) return eventShorts;
-    const eventIds = new Set(filtered.map((e) => e.id));
-    let shorts = eventShorts.filter((s) => eventIds.has(s.eventId));
-    if (query.trim()) {
-      const q = query.toLowerCase();
-      shorts = eventShorts.filter((s) => s.title.toLowerCase().includes(q) || s.sport.toLowerCase().includes(q));
-    }
-    return shorts;
-  }, [sport, query, filtered]);
+  const sportOptions = useMemo(() => {
+    const sports = getSportsFromItems(items.map((e) => ({ sport: sportKey(e.sport) })));
+    return toSportOptions(sports, sportCounts);
+  }, [items, sportCounts]);
 
-  const filteredStories = useMemo(() => {
-    if (sport === 'All' && !query) return eventStories;
-    const eventIds = new Set(filtered.map((e) => e.id));
-    let stories = eventStories.filter((s) => eventIds.has(s.eventId));
-    if (query.trim()) {
-      const q = query.toLowerCase();
-      stories = eventStories.filter((s) => s.title.toLowerCase().includes(q) || s.sport.toLowerCase().includes(q));
-    }
-    return stories;
-  }, [sport, query, filtered]);
+  const shorts = (overview?.shorts ?? []).map((s) => ({
+    ...s,
+    thumbnail: s.thumbnail || s.image,
+  }));
+
+  const stories = (overview?.stories ?? []).map((s) => ({
+    ...s,
+    thumbnail: s.thumbnail || s.image,
+    sport: s.sport || s.category || 'Sports',
+    type: s.type || 'story',
+    duration: s.duration || '',
+  }));
+
+  if (loading && !overview) {
+    return <Loader fullScreen label="Loading events" />;
+  }
 
   return (
     <>
@@ -75,7 +87,7 @@ export default function Events() {
         path="/events"
       />
 
-      <EventHeroBanner event={featured} />
+      {featured && <EventHeroBanner event={featured} />}
 
       <section className="py-6 sm:py-8 border-b dark:border-untold-border light:border-gray-200">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -100,17 +112,23 @@ export default function Events() {
             sticky={false}
             primary={{
               label: 'Sport',
-              options: toSportOptions(EVENT_SPORTS, sportCounts),
+              options: sportOptions,
               active: sport,
               onChange: setSport,
             }}
-            resultCount={filtered.length}
+            resultCount={items.length}
             resultLabel="events"
             onClear={() => { setSport('All'); setQuery(''); }}
             showClear={sport !== 'All' || query.trim()}
           />
         </div>
       </section>
+
+      {error && (
+        <div className="py-8 text-center px-4">
+          <p className="text-sm text-red-400">{error}</p>
+        </div>
+      )}
 
       {live.length > 0 && (
         <section className="py-12 sm:py-16" aria-labelledby="live-events">
@@ -147,17 +165,17 @@ export default function Events() {
         </section>
       )}
 
-      {filtered.length === 0 && (
+      {!loading && items.length === 0 && !error && (
         <div className="py-16 text-center px-4">
           <p className="text-lg dark:text-untold-muted light:text-gray-500">No events match your search.</p>
         </div>
       )}
 
-      {filteredShorts.length > 0 && (
+      {shorts.length > 0 && (
         <section className="py-12 sm:py-16 dark:bg-untold-surface/30 light:bg-gray-50/50" aria-labelledby="event-shorts">
           <SectionHeader title="Event Shorts" subtitle="Top goals, wickets, knockouts, and fastest laps" viewAllLink="/shorts" />
           <ContentRow>
-            {filteredShorts.map((short) => (
+            {shorts.map((short) => (
               <ShortsCard
                 key={short.id}
                 title={short.title}
@@ -171,11 +189,11 @@ export default function Events() {
         </section>
       )}
 
-      {filteredStories.length > 0 && (
+      {stories.length > 0 && (
         <section className="py-12 sm:py-16 pb-20" aria-labelledby="event-stories">
           <SectionHeader title="Event Stories" subtitle="Pre-match previews and post-match storytelling" viewAllLink="/stories" />
           <ContentRow>
-            {filteredStories.map((story) => (
+            {stories.map((story) => (
               <div key={story.id} className="shrink-0 w-[260px] sm:w-[280px]">
                 <VideoCard
                   title={story.title}

@@ -10,13 +10,15 @@ import {
   currencyForLanguage,
   paymentsForLanguage,
 } from '../data/regionalConfig';
-import { videoCatalog } from '../data/videoCatalog';
+import { api } from '../api/client';
+import { mapVideo } from '../api/content';
 
 const LocaleContext = createContext(null);
 
 export function LocaleProvider({ children }) {
   const { i18n } = useTranslation();
   const [regionId, setRegionId] = useState(() => detectRegion());
+  const [regionalVideos, setRegionalVideos] = useState([]);
 
   const region = useMemo(() => getRegionById(regionId), [regionId]);
   const currency = useMemo(() => currencyForLanguage(i18n.language), [i18n.language]);
@@ -26,17 +28,36 @@ export function LocaleProvider({ children }) {
     persistRegion(regionId);
   }, [regionId]);
 
+  useEffect(() => {
+    const sports = (region.sports || []).slice(0, 3);
+    const fetches = sports.length
+      ? sports.map((sport) => api.videos.list({ category: sport.toLowerCase(), page_size: 4 }))
+      : [api.videos.list({ trending: true, page_size: 8 })];
+
+    Promise.all(fetches)
+      .then((results) => {
+        const seen = new Set();
+        const items = [];
+        results.forEach((r) => {
+          r.items.forEach((v) => {
+            if (!seen.has(v.id)) {
+              seen.add(v.id);
+              items.push(mapVideo(v));
+            }
+          });
+        });
+        setRegionalVideos(items.slice(0, 8));
+      })
+      .catch(() => {
+        api.videos.list({ trending: true, page_size: 8 })
+          .then((r) => setRegionalVideos(r.items.map(mapVideo)))
+          .catch(() => setRegionalVideos([]));
+      });
+  }, [region]);
+
   const setRegion = useCallback((id) => {
     setRegionId(id);
   }, []);
-
-  const regionalVideos = useMemo(() => {
-    const ids = region.featuredVideoIds || [];
-    const featured = ids.map((id) => videoCatalog.find((v) => v.id === id)).filter(Boolean);
-    const sports = new Set(region.sports || []);
-    const sportBased = videoCatalog.filter((v) => sports.has(v.sport) && !ids.includes(v.id));
-    return [...featured, ...sportBased].slice(0, 8);
-  }, [region]);
 
   const pricing = useMemo(() => MEMBERSHIP_PRICING[currency] || MEMBERSHIP_PRICING.USD, [currency]);
 

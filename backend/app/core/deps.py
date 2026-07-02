@@ -53,11 +53,19 @@ def get_current_admin(current_user: User = Depends(get_current_user)) -> User:
     return current_user
 
 
-def get_current_studio_user(current_user: User = Depends(get_current_user)) -> User:
-    """Requires JWT and Studio access (admin or assigned studio_role)."""
-    if not current_user.is_admin and not current_user.studio_role:
-        raise ForbiddenError("Studio access required")
-    return current_user
+def get_current_studio_user(
+    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
+    db: Session = Depends(get_db),
+) -> User:
+    """Requires JWT and Studio access (admin, studio_role, or organization member)."""
+    user = get_current_user(credentials, db)
+    if user.is_admin or user.studio_role:
+        return user
+    from app.domain.tenancy.context import TenantContextService
+
+    if TenantContextService.user_has_org_access(db, user.id):
+        return user
+    raise ForbiddenError("Studio access required")
 
 
 def _resolve_studio_role(user: User, member_role: str | None = None) -> StudioRole:

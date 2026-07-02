@@ -14,6 +14,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from app.api.v1.router import api_router
 from app.gateway.graphql_schema import create_graphql_router
 from app.gateway.middleware import GatewayUsageMiddleware
+from app.middleware.compliance_access_log import ComplianceAccessLogMiddleware
 from app.gateway.router import gateway_router
 from app.core.config import get_settings
 from app.core.telemetry import configure_logging, setup_telemetry
@@ -45,6 +46,11 @@ async def lifespan(app: FastAPI):
     yield
     if ws_task:
         ws_task.cancel()
+        try:
+            await ws_task
+        except asyncio.CancelledError:
+            pass
+    engine.dispose()
     logger.info("Shutting down %s", settings.app_name)
 
 
@@ -70,6 +76,8 @@ app.add_middleware(
         "X-Request-ID",
         "X-API-Version",
         "Accept-Version",
+        "X-Organization-ID",
+        "X-Workspace-ID",
     ],
 )
 
@@ -77,6 +85,7 @@ if settings.is_production and settings.trusted_host_list != ["*"]:
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.trusted_host_list)
 
 app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(ComplianceAccessLogMiddleware)
 
 setup_rate_limiting(app, settings)
 app.add_middleware(GatewayUsageMiddleware)
@@ -182,6 +191,7 @@ def health_check(request: Request):
 app.include_router(api_router, prefix=settings.api_v1_prefix)
 app.include_router(gateway_router, prefix="/gateway")
 app.include_router(create_graphql_router(), prefix="/gateway/graphql")
+app.include_router(create_graphql_router(), prefix="/gateway/sandbox/graphql")
 if settings.enable_websocket:
     app.include_router(ws_router, tags=["WebSocket"])
     app.include_router(studio_ws_router, tags=["WebSocket"])

@@ -5,32 +5,6 @@ import StatCard from '../components/StatCard';
 import Modal from '../components/Modal';
 import { FilmIcon } from '../components/AdminIcons';
 
-const MOCK_JOBS = [
-  {
-    id: 1,
-    video_title: 'Dhoni: The Untold Captain',
-    source_language: 'en',
-    target_languages: ['hi', 'es', 'ru', 'ar'],
-    status: 'completed',
-    progress: 100,
-    steps: AI_PIPELINE_STEPS.map((s) => ({ ...s, status: 'completed' })),
-    created_at: new Date(Date.now() - 86400000).toISOString(),
-  },
-  {
-    id: 2,
-    video_title: 'Messi vs Ronaldo: Eternal Rivalry',
-    source_language: 'en',
-    target_languages: ['hi', 'es', 'ru'],
-    status: 'processing',
-    progress: 58,
-    steps: AI_PIPELINE_STEPS.map((s, i) => ({
-      ...s,
-      status: i < 3 ? 'completed' : i === 3 ? 'processing' : 'pending',
-    })),
-    created_at: new Date().toISOString(),
-  },
-];
-
 function StepStatus({ status }) {
   const colors = {
     completed: 'text-green-400',
@@ -44,18 +18,20 @@ function StepStatus({ status }) {
 export default function AILocalizationPage() {
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [usingMock, setUsingMock] = useState(false);
+  const [error, setError] = useState(null);
   const [selected, setSelected] = useState(null);
 
   const fetchJobs = () => {
     setLoading(true);
     aiPipeline.listJobs()
       .then((data) => {
-        const items = data.items?.length ? data.items : MOCK_JOBS;
-        setJobs(items);
-        setUsingMock(!data.items?.length);
+        setJobs(data.items || []);
+        setError(null);
       })
-      .catch(() => { setJobs(MOCK_JOBS); setUsingMock(true); })
+      .catch((err) => {
+        setJobs([]);
+        setError(err.message || 'Failed to load localization jobs');
+      })
       .finally(() => setLoading(false));
   };
 
@@ -73,9 +49,9 @@ export default function AILocalizationPage() {
         </p>
       </div>
 
-      {usingMock && (
-        <p className="text-xs px-3 py-2 rounded-lg bg-amber-500/10 text-amber-300 border border-amber-500/20">
-          Showing demo localization jobs — API pipeline not connected yet.
+      {error && (
+        <p className="text-xs px-3 py-2 rounded-lg bg-red-500/10 text-red-300 border border-red-500/20">
+          {error}
         </p>
       )}
 
@@ -107,6 +83,10 @@ export default function AILocalizationPage() {
         </div>
         {loading ? (
           <div className="h-48 skeleton" />
+        ) : jobs.length === 0 ? (
+          <p className="px-5 py-8 text-sm dark:text-untold-muted light:text-gray-500 text-center">
+            No localization jobs yet. Start a pipeline from a video project.
+          </p>
         ) : (
           <div className="divide-y dark:divide-white/10 light:divide-gray-200">
             {jobs.map((job) => (

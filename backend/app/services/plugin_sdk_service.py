@@ -21,6 +21,7 @@ from app.models.studio_platform import (
     PluginEventLog,
     PluginInstallation,
     PluginInstallationHistory,
+    PluginRating,
     PluginVersion,
 )
 from app.plugins.sdk import PluginContext
@@ -55,6 +56,7 @@ class PluginSdkService:
             version = PluginVersion(
                 plugin_id=plugin.id,
                 version=1,
+                version_label="1.0.0",
                 manifest=manifest,
                 settings_schema=manifest.get("settings_schema") or {},
                 default_settings=entry["default_settings"],
@@ -64,6 +66,7 @@ class PluginSdkService:
             db.add(version)
             db.flush()
             plugin.current_version_id = version.id
+            plugin.documentation_url = entry.get("author_url") or f"/studio/plugins/docs#{entry['slug']}"
         db.commit()
 
     @staticmethod
@@ -72,6 +75,7 @@ class PluginSdkService:
             "id": v.id,
             "plugin_id": v.plugin_id,
             "version": v.version,
+            "version_label": getattr(v, "version_label", None) or f"1.{max(v.version - 1, 0)}.0",
             "manifest": v.manifest or {},
             "settings_schema": v.settings_schema or {},
             "default_settings": v.default_settings or {},
@@ -106,6 +110,7 @@ class PluginSdkService:
             "plugin_icon": plugin.icon if plugin else "🧩",
             "installed_version_id": inst.installed_version_id,
             "installed_version": installed_version_num,
+            "installed_version_label": installed_ver.version_label if installed_ver else "1.0.0",
             "latest_version": latest_ver,
             "enabled": inst.enabled,
             "settings": inst.settings or {},
@@ -170,6 +175,10 @@ class PluginSdkService:
             "update_available": bool(
                 installation and installed_version_num is not None and installed_version_num < latest_ver
             ),
+            "average_rating": round(float(plugin.average_rating or 0), 2),
+            "rating_count": int(plugin.rating_count or 0),
+            "install_count": int(plugin.install_count or 0),
+            "documentation_url": plugin.documentation_url,
         }
 
     @staticmethod
@@ -213,12 +222,19 @@ class PluginSdkService:
         }
 
     @staticmethod
-    def list_plugins(db: Session, user: User, *, category: str | None = None) -> list[dict]:
+    def list_plugins(db: Session, user: User, *, category: str | None = None, search: str | None = None) -> list[dict]:
         PluginSdkService.ensure_catalog(db)
         query = db.query(PluginDefinition).filter(PluginDefinition.status == "published")
         if category:
             query = query.filter(PluginDefinition.category == category)
-        plugins = query.order_by(PluginDefinition.name).all()
+        if search:
+            like = f"%{search.strip()}%"
+            query = query.filter(
+                (PluginDefinition.name.ilike(like))
+                | (PluginDefinition.description.ilike(like))
+                | (PluginDefinition.slug.ilike(like))
+            )
+        plugins = query.order_by(PluginDefinition.install_count.desc(), PluginDefinition.name).all()
         return [PluginSdkService._plugin_dict(db, p, user.id) for p in plugins]
 
     @staticmethod
@@ -239,7 +255,7 @@ class PluginSdkService:
         return [PluginSdkService._installation_dict(db, r) for r in rows]
 
     @staticmethod
-    def install(db: Session, user: User, slug: str, data) -> dict:
+    def install(db: Session, user: User, slug: str, data, *, organization_id: int | None = None) -> dict:
         PluginSdkService.ensure_catalog(db)
         plugin = PluginSdkService._get_plugin_by_slug(db, slug)
         existing = (
@@ -268,6 +284,7 @@ class PluginSdkService:
         inst = PluginInstallation(
             user_id=user.id,
             plugin_id=plugin.id,
+            organization_id=organization_id,
             installed_version_id=version.id,
             enabled=True,
             settings=settings,
@@ -299,6 +316,7 @@ class PluginSdkService:
             performed_by_id=user.id,
         )
         db.add(hist)
+        plugin.install_count = int(plugin.install_count or 0) + 1
         db.commit()
         db.refresh(inst)
 
@@ -413,8 +431,23 @@ class PluginSdkService:
             raise BadRequestError("Already on latest version")
         old_v = current.version if current else None
         inst.installed_version_id = latest.id
+        merged_settings = dict(latest.default_settings or {})
+        merged_settings.update(inst.settings or {})
+        inst.settings = merged_settings
         inst.status = "active"
         inst.updated_at = datetime.now(timezone.utc)
+        handler_cls = BACKEND_PLUGIN_REGISTRY.get((plugin.backend_entry if plugin else "") or "")
+        if handler_cls and plugin:
+            handler = handler_cls()
+            ctx = PluginContext(
+                db=db,
+                user_id=user.id,
+                installation_id=inst.id,
+                plugin_slug=plugin.slug,
+                settings=inst.settings or {},
+                granted_permissions=inst.granted_permissions or [],
+            )
+            handler.on_update(ctx, old_v or 0, latest.version)
         db.add(
             PluginInstallationHistory(
                 installation_id=inst.id,
@@ -493,6 +526,20 @@ class PluginSdkService:
     @staticmethod
     def sdk_docs() -> dict:
         return {
+            "title": "UNTOLD Plugin SDK",
+            "version": "1.0",
+            "backend": {
+                "base_class": "app.plugins.sdk.base.BasePlugin",
+                "context": "PluginContext",
+                "lifecycle": ["on_install", "on_enable", "on_disable", "on_update", "on_uninstall"],
+                "handlers": ["on_event", "on_hook"],
+                "register": "POST /api/v1/studio/platform/plugins/register",
+            },
+            "frontend": {
+                "package": "src/plugin-sdk",
+                "entry": "createPlugin / PluginProvider",
+                "hooks": "usePluginHooks(hookName)",
+            },
             "events": STUDIO_EVENTS,
             "hooks": HOOK_POINTS,
             "permissions": PLUGIN_PERMISSIONS,
@@ -559,6 +606,7 @@ class PluginSdkService:
         version = PluginVersion(
             plugin_id=plugin.id,
             version=max_v + 1,
+            version_label=f"1.{max_v}.0",
             manifest=manifest,
             settings_schema=current.settings_schema if current else {},
             default_settings=current.default_settings if current else plugin.default_settings,
@@ -606,6 +654,7 @@ class PluginSdkService:
         version = PluginVersion(
             plugin_id=plugin.id,
             version=1,
+            version_label="1.0.0",
             manifest=validated,
             settings_schema=validated.get("settings_schema") or {},
             default_settings=validated["default_settings"],
@@ -614,5 +663,72 @@ class PluginSdkService:
         db.add(version)
         db.flush()
         plugin.current_version_id = version.id
+        plugin.documentation_url = validated.get("documentation_url") or validated.get("author_url")
         db.commit()
         return PluginSdkService._plugin_dict(db, plugin, user.id)
+
+    @staticmethod
+    def list_versions(db: Session, user: User, slug: str) -> list[dict]:
+        PluginSdkService.ensure_catalog(db)
+        plugin = PluginSdkService._get_plugin_by_slug(db, slug)
+        rows = (
+            db.query(PluginVersion)
+            .filter(PluginVersion.plugin_id == plugin.id)
+            .order_by(PluginVersion.version.desc())
+            .all()
+        )
+        return [PluginSdkService._version_dict(v) for v in rows]
+
+    @staticmethod
+    def list_ratings(db: Session, user: User, slug: str, *, limit: int = 20) -> list[dict]:
+        plugin = PluginSdkService._get_plugin_by_slug(db, slug)
+        rows = (
+            db.query(PluginRating)
+            .filter(PluginRating.plugin_id == plugin.id)
+            .order_by(PluginRating.created_at.desc())
+            .limit(limit)
+            .all()
+        )
+        return [
+            {
+                "id": r.id,
+                "rating": r.rating,
+                "review": r.review,
+                "user_id": r.user_id,
+                "created_at": r.created_at,
+            }
+            for r in rows
+        ]
+
+    @staticmethod
+    def rate_plugin(db: Session, user: User, slug: str, *, rating: int, review: str | None = None) -> dict:
+        if rating < 1 or rating > 5:
+            raise BadRequestError("Rating must be between 1 and 5")
+        plugin = PluginSdkService._get_plugin_by_slug(db, slug)
+        row = (
+            db.query(PluginRating)
+            .filter(PluginRating.plugin_id == plugin.id, PluginRating.user_id == user.id)
+            .first()
+        )
+        if row:
+            row.rating = rating
+            row.review = review
+            row.updated_at = datetime.now(timezone.utc)
+        else:
+            row = PluginRating(plugin_id=plugin.id, user_id=user.id, rating=rating, review=review)
+            db.add(row)
+        db.flush()
+        stats = (
+            db.query(func.avg(PluginRating.rating), func.count(PluginRating.id))
+            .filter(PluginRating.plugin_id == plugin.id)
+            .one()
+        )
+        plugin.average_rating = float(stats[0] or 0)
+        plugin.rating_count = int(stats[1] or 0)
+        db.commit()
+        return {
+            "plugin_slug": slug,
+            "rating": rating,
+            "average_rating": round(plugin.average_rating, 2),
+            "rating_count": plugin.rating_count,
+        }

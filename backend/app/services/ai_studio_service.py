@@ -22,8 +22,12 @@ from app.schemas.ai_studio import (
 from app.services.generation_telemetry_service import (
     apply_create_defaults,
     apply_failure,
-    apply_success,
+    finalize_generation_success,
     telemetry_dict,
+)
+from app.domain.tenancy.ai_scope import (
+    resolve_generation_organization_id,
+    scope_ai_generations_query,
 )
 from app.services.studio_platform_service import StudioPlatformService
 
@@ -114,7 +118,7 @@ class AIStudioService:
     def get_overview(db: Session, user: User) -> dict:
         StudioPlatformService.require_permission(db, user, None, "ai.generate")
         registry = get_provider_registry()
-        counts = AIStudioService._status_counts(db)
+        counts = AIStudioService._status_counts(db, user)
         return {
             "modules": _MODULE_CATALOG,
             "providers": registry.list_providers(),
@@ -122,8 +126,9 @@ class AIStudioService:
         }
 
     @staticmethod
-    def _status_counts(db: Session) -> dict[str, int]:
-        rows = db.query(AIGeneration.status, func.count(AIGeneration.id)).group_by(AIGeneration.status).all()
+    def _status_counts(db: Session, user: User) -> dict[str, int]:
+        base_query = scope_ai_generations_query(db, user, db.query(AIGeneration))
+        rows = base_query.with_entities(AIGeneration.status, func.count(AIGeneration.id)).group_by(AIGeneration.status).all()
         base = {s.value: 0 for s in AIGenerationStatus}
         for status, count in rows:
             key = status.value if hasattr(status, "value") else str(status)
@@ -148,6 +153,7 @@ class AIStudioService:
 
         gen = AIGeneration(
             project_id=data.project_id,
+            organization_id=resolve_generation_organization_id(db, user, data.project_id),
             module=data.module,
             prompt=data.prompt,
             parameters=data.parameters,
@@ -173,24 +179,25 @@ class AIStudioService:
     @staticmethod
     def get_queue(db: Session, user: User) -> dict:
         StudioPlatformService.require_permission(db, user, None, "ai.generate")
-        queued = AIStudioService._jobs_query(db).filter(AIGeneration.status == AIGenerationStatus.QUEUED).limit(50).all()
-        running = AIStudioService._jobs_query(db).filter(AIGeneration.status == AIGenerationStatus.RUNNING).limit(20).all()
+        queued = AIStudioService._jobs_query(db, user).filter(AIGeneration.status == AIGenerationStatus.QUEUED).limit(50).all()
+        running = AIStudioService._jobs_query(db, user).filter(AIGeneration.status == AIGenerationStatus.RUNNING).limit(20).all()
         return {
             "queued": [AIStudioService._job_dict(g, u.full_name if u else None, pt) for g, u, pt in queued],
             "running": [AIStudioService._job_dict(g, u.full_name if u else None, pt) for g, u, pt in running],
-            "counts": AIStudioService._status_counts(db),
+            "counts": AIStudioService._status_counts(db, user),
         }
 
     @staticmethod
-    def _jobs_query(db: Session):
+    def _jobs_query(db: Session, user: User):
         from app.models.studio import Production
 
-        return (
+        query = (
             db.query(AIGeneration, User, Production.title)
             .outerjoin(User, User.id == AIGeneration.created_by_id)
             .outerjoin(Production, Production.id == AIGeneration.project_id)
             .order_by(AIGeneration.created_at.desc())
         )
+        return scope_ai_generations_query(db, user, query)
 
     @staticmethod
     def get_history(
@@ -201,7 +208,7 @@ class AIStudioService:
         offset: int = 0,
     ) -> dict:
         StudioPlatformService.require_permission(db, user, None, "ai.generate")
-        q = AIStudioService._jobs_query(db)
+        q = AIStudioService._jobs_query(db, user)
         if module:
             try:
                 mod = AIGenerationModule(module)
@@ -224,7 +231,7 @@ class AIStudioService:
         offset: int = 0,
     ) -> dict:
         StudioPlatformService.require_permission(db, user, None, "ai.generate")
-        q = AIStudioService._jobs_query(db)
+        q = AIStudioService._jobs_query(db, user)
         if module:
             try:
                 mod = AIGenerationModule(module)
@@ -244,10 +251,22 @@ class AIStudioService:
         return {"items": items, "total": total, "totals": totals}
 
     @staticmethod
+    def _get_job_for_user(db: Session, user: User, job_id: int) -> AIGeneration:
+        row = (
+            AIStudioService._jobs_query(db, user)
+            .filter(AIGeneration.id == job_id)
+            .first()
+        )
+        if not row:
+            raise NotFoundError("AI job")
+        gen, _, _ = row
+        return gen
+
+    @staticmethod
     def get_job(db: Session, user: User, job_id: int) -> dict:
         StudioPlatformService.require_permission(db, user, None, "ai.generate")
         row = (
-            AIStudioService._jobs_query(db)
+            AIStudioService._jobs_query(db, user)
             .filter(AIGeneration.id == job_id)
             .first()
         )
@@ -259,9 +278,7 @@ class AIStudioService:
     @staticmethod
     def retry_job(db: Session, user: User, job_id: int) -> AIGeneration:
         StudioPlatformService.require_permission(db, user, None, "ai.generate")
-        gen = db.query(AIGeneration).filter(AIGeneration.id == job_id).first()
-        if not gen:
-            raise NotFoundError("AI job")
+        gen = AIStudioService._get_job_for_user(db, user, job_id)
         if gen.status not in (AIGenerationStatus.FAILED, AIGenerationStatus.CANCELLED):
             raise ConflictError("Only failed or cancelled jobs can be retried")
         gen.status = AIGenerationStatus.QUEUED
@@ -285,9 +302,7 @@ class AIStudioService:
     @staticmethod
     def cancel_job(db: Session, user: User, job_id: int) -> AIGeneration:
         StudioPlatformService.require_permission(db, user, None, "ai.generate")
-        gen = db.query(AIGeneration).filter(AIGeneration.id == job_id).first()
-        if not gen:
-            raise NotFoundError("AI job")
+        gen = AIStudioService._get_job_for_user(db, user, job_id)
         if gen.status not in (AIGenerationStatus.QUEUED, AIGenerationStatus.RUNNING):
             raise ConflictError("Only queued or running jobs can be cancelled")
         gen.status = AIGenerationStatus.CANCELLED
@@ -454,9 +469,10 @@ class AIStudioService:
             meta = dict(gen.output_meta or {})
             meta["cache_hit"] = True
             meta["cost_saved_usd"] = cached.get("_cost_saved_usd", 0)
-            apply_success(gen, started_at=gen.started_at, output_text=gen.output_text, meta=meta, model=cached.get("model"))
-            gen.cost_usd = 0.0
-            AICostService.evaluate_budget_alerts(db, gen)
+            meta["cost_usd"] = 0
+            finalize_generation_success(
+                db, gen, started_at=gen.started_at, output_text=gen.output_text, meta=meta, model=cached.get("model"),
+            )
             db.commit()
             return
 
@@ -517,12 +533,6 @@ class AIStudioService:
             gen.r2_key = result.r2_key
             gen.provider = result.provider
             gen.parameters = {**(gen.parameters or {}), "output": result.output_text}
-            apply_success(
-                gen,
-                started_at=gen.started_at,
-                output_text=result.output_text,
-                meta=result.meta,
-            )
             AICostService.store_cache(
                 db,
                 module=module_val,
@@ -539,7 +549,13 @@ class AIStudioService:
                 provider=gen.provider,
                 cost_usd=float(gen.cost_usd or 0),
             )
-            AICostService.evaluate_budget_alerts(db, gen)
+            finalize_generation_success(
+                db,
+                gen,
+                started_at=gen.started_at,
+                output_text=result.output_text,
+                meta=result.meta,
+            )
 
             if gen.created_by_id:
                 db.add(
@@ -552,6 +568,24 @@ class AIStudioService:
                     )
                 )
             db.commit()
+            try:
+                from app.domain.plugins.registry import PluginEventBus
+
+                PluginEventBus.emit(
+                    db,
+                    "ai.job.completed",
+                    {
+                        "generation_id": gen.id,
+                        "module": gen.module.value if hasattr(gen.module, "value") else str(gen.module),
+                        "project_id": gen.project_id,
+                        "provider": gen.provider,
+                        "cost_usd": float(gen.cost_usd or 0),
+                    },
+                    user_id=gen.created_by_id,
+                    commit=True,
+                )
+            except Exception:
+                pass
         except Exception as exc:
             gen = db.query(AIGeneration).filter(AIGeneration.id == generation_id).first()
             if gen and gen.status != AIGenerationStatus.CANCELLED:

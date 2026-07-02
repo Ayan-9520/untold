@@ -346,12 +346,14 @@ from app.models.studio_platform import (  # noqa: E402, F401
     ProjectComment,
     VoiceGeneration,
 )
+from app.models.auth_tokens import ContactMessage, NewsletterSubscriber, PasswordResetToken  # noqa: E402, F401
 from app.models.monetization import (  # noqa: E402, F401
     AccessTier,
     Invoice,
     InvoiceStatus,
     MagazineDownload,
     MagazineEdition,
+    MagazineJob,
     Payment,
     PaymentProvider,
     PaymentStatus,

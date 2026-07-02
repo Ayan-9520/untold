@@ -98,7 +98,6 @@ class PublishingAgentService:
     @staticmethod
     def get_overview(db: Session, user: User) -> dict:
         StudioPlatformService.require_permission(db, user, None, "publish.schedule")
-        PublishingCmsService.seed_demo_jobs(db)
 
         total_runs = db.query(func.count(PublishAgentRun.id)).scalar() or 0
         active = (
@@ -356,6 +355,23 @@ class PublishingAgentService:
                     {"run_id": run.id, "job_id": job.id, "platform": plat, "project_id": run.project_id},
                     project_id=run.project_id,
                 )
+                try:
+                    from app.domain.plugins.registry import PluginEventBus
+
+                    PluginEventBus.emit(
+                        db,
+                        "publish.completed",
+                        {
+                            "run_id": run.id,
+                            "job_id": job.id,
+                            "platform": plat,
+                            "project_id": run.project_id,
+                        },
+                        user_id=run.created_by_id,
+                        commit=False,
+                    )
+                except Exception:
+                    pass
             else:
                 job.status = "failed"
                 job.error_message = err
@@ -375,6 +391,18 @@ class PublishingAgentService:
                     {"run_id": run.id, "job_id": job.id, "platform": plat, "error": err},
                     project_id=run.project_id,
                 )
+                try:
+                    from app.domain.plugins.registry import PluginEventBus
+
+                    PluginEventBus.emit(
+                        db,
+                        "publish.failed",
+                        {"run_id": run.id, "job_id": job.id, "platform": plat, "error": err},
+                        user_id=run.created_by_id,
+                        commit=False,
+                    )
+                except Exception:
+                    pass
 
             job_results.append({
                 "id": job.id,

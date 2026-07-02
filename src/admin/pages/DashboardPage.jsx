@@ -24,6 +24,7 @@ import {
   DashboardError,
   formatBytes,
 } from '../features/dashboard';
+import PluginDashboardWidgets from '../components/PluginDashboardWidgets';
 
 function StorageIcon(props) {
   return (
@@ -48,7 +49,7 @@ export default function DashboardPage() {
     <div className="space-y-8 animate-fade-in">
       {!data.live && (
         <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200/90">
-          Demo pipeline data — rebuild Docker for full live Studio API sync.
+          Partial dashboard data — studio platform API unavailable; showing aggregated stats from available endpoints.
         </div>
       )}
 
@@ -100,6 +101,8 @@ export default function DashboardPage() {
           hint={unreadNotifications ? 'Unread' : 'All caught up'}
         />
       </div>
+
+      <PluginDashboardWidgets />
 
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">

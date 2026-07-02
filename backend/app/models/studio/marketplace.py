@@ -86,6 +86,9 @@ class AgentInstallation(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    organization_id: Mapped[int | None] = mapped_column(
+        ForeignKey("organizations.id", ondelete="SET NULL"), index=True, nullable=True
+    )
     agent_id: Mapped[int] = mapped_column(ForeignKey("marketplace_agents.id", ondelete="CASCADE"), index=True)
     installed_version_id: Mapped[int] = mapped_column(
         ForeignKey("marketplace_agent_versions.id", ondelete="RESTRICT"), nullable=False
@@ -122,3 +125,79 @@ class AgentInstallationHistory(Base):
     created_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     installation: Mapped[AgentInstallation] = relationship(back_populates="history")
+
+
+class AgentExecutionLog(Base):
+    __tablename__ = "agent_execution_logs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    installation_id: Mapped[int | None] = mapped_column(
+        ForeignKey("agent_installations.id", ondelete="SET NULL"), index=True, nullable=True
+    )
+    agent_slug: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    organization_id: Mapped[int | None] = mapped_column(
+        ForeignKey("organizations.id", ondelete="SET NULL"), nullable=True
+    )
+    project_id: Mapped[int | None] = mapped_column(ForeignKey("productions.id", ondelete="SET NULL"), nullable=True)
+    run_id: Mapped[int | None] = mapped_column(nullable=True)
+    generation_id: Mapped[int | None] = mapped_column(ForeignKey("ai_generations.id", ondelete="SET NULL"), nullable=True)
+    status: Mapped[str] = mapped_column(String(32), default="success", nullable=False)
+    duration_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    input_tokens: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    output_tokens: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    cost_usd: Mapped[float] = mapped_column(default=0, nullable=False)
+    message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    meta: Mapped[dict] = mapped_column(JSONB, default=dict, nullable=False)
+    created_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), server_default=func.now(), index=True)
+
+
+class AgentMemoryEntry(Base):
+    __tablename__ = "agent_memory_entries"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    installation_id: Mapped[int] = mapped_column(ForeignKey("agent_installations.id", ondelete="CASCADE"), index=True)
+    project_id: Mapped[int | None] = mapped_column(ForeignKey("productions.id", ondelete="SET NULL"), nullable=True)
+    memory_key: Mapped[str] = mapped_column(String(200), nullable=False)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    embedding_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    meta: Mapped[dict] = mapped_column(JSONB, default=dict, nullable=False)
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
+class AgentSchedule(Base):
+    __tablename__ = "agent_schedules"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    installation_id: Mapped[int] = mapped_column(ForeignKey("agent_installations.id", ondelete="CASCADE"), index=True)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    cron_expression: Mapped[str] = mapped_column(String(120), nullable=False)
+    payload: Mapped[dict] = mapped_column(JSONB, default=dict, nullable=False)
+    next_run_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, index=True)
+    last_run_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_by_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    created_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class AgentMessage(Base):
+    __tablename__ = "agent_messages"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    from_installation_id: Mapped[int | None] = mapped_column(
+        ForeignKey("agent_installations.id", ondelete="SET NULL"), nullable=True
+    )
+    to_installation_id: Mapped[int | None] = mapped_column(
+        ForeignKey("agent_installations.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    from_slug: Mapped[str] = mapped_column(String(64), nullable=False)
+    to_slug: Mapped[str] = mapped_column(String(64), nullable=False)
+    message_type: Mapped[str] = mapped_column(String(32), default="task", nullable=False)
+    payload: Mapped[dict] = mapped_column(JSONB, default=dict, nullable=False)
+    status: Mapped[str] = mapped_column(String(32), default="pending", nullable=False)
+    read_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), server_default=func.now())

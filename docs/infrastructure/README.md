@@ -1,6 +1,6 @@
 # UNTOLD Production Infrastructure
 
-> **Full guide:** [deployment-guide.md](../deployment-guide.md) · **Checklist:** [production-checklist.md](../production-checklist.md)
+> **Full guide:** [deployment-guide.md](../deployment-guide.md) · **Global:** [global-deployment.md](../global-deployment.md) · **Checklist:** [production-checklist.md](../production-checklist.md)
 
 ## Quick start (Docker)
 
@@ -50,6 +50,24 @@ cp deploy/kubernetes/secrets.example.yaml deploy/kubernetes/secrets.yaml
 kubectl apply -k deploy/kubernetes
 ```
 
+### Multi-region (production)
+
+```bash
+# EU primary
+kubectl apply -k deploy/kubernetes/overlays/eu-primary --context eu
+
+# US secondary (failover + geo traffic)
+kubectl apply -k deploy/kubernetes/overlays/us-secondary --context us
+```
+
+See [Global Deployment](../global-deployment.md) for Cloudflare, DR, and observability.
+
+## Cloudflare edge
+
+```bash
+cd deploy/cloudflare && wrangler deploy
+```
+
 ## CI/CD
 
 | Workflow | Trigger | Purpose |
@@ -68,20 +86,24 @@ kubectl apply -k deploy/kubernetes
 
 ## Backups & DR
 
-- **RPO:** 24h · **RTO:** 4h
-- Scripts: `deploy/scripts/backup.sh`, `restore.sh`, `dr-runbook.sh`
+- **RPO:** 1h (WAL) / 24h (daily dump) · **RTO:** 1h (global) / 4h (single-region)
+- Scripts: `deploy/scripts/backup.sh`, `restore.sh`, `dr-runbook.sh`, `global-failover.sh`
 - Optional S3: `BACKUP_S3_URI=s3://bucket/path`
 
 ## Architecture
 
 ```
-Internet → CDN → Ingress/nginx
-                    ├── Web (SPA)
-                    └── API (FastAPI) ──┬── PostgreSQL
+Internet → Cloudflare (CDN / WAF / LB / Worker)
+              ├── Pages (SPA static)
+              └── Regional K8s ingress
+                    ├── Web (SPA fallback)
+                    └── API (FastAPI) ──┬── PostgreSQL (+ replicas)
                           │             └── Redis
                     Celery workers ────────┘
+                    Media → R2 + CDN_BASE_URL
                     
 Observability: API → /metrics → Prometheus → Grafana
-               API → OTLP → Collector → Prometheus
-               Docker logs → Promtail → Loki → Grafana
+               API → OTLP → Collector → Tempo/Mimir
+               Logs → Loki → Grafana
+               Edge → Cloudflare Analytics + Logpush
 ```

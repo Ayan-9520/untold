@@ -13,13 +13,15 @@ export const ProductionPipelinePage = lazy(() => import('../pages/ProductionPipe
 export const WorkflowDashboardPage = lazy(() => import('../pages/WorkflowDashboardPage'));
 export const WorkflowBuilderPage = lazy(() => import('../pages/WorkflowBuilderPage'));
 export const WorkflowRunPage = lazy(() => import('../pages/WorkflowRunPage'));
-export const AgentMarketplacePage = lazy(() => import('../pages/AgentMarketplacePage'));
+export const BusinessIntelligencePage = lazy(() => import('../pages/BusinessIntelligencePage'));
 export const AICostOptimizationPage = lazy(() => import('../pages/AICostOptimizationPage'));
 export const CollaborationPage = lazy(() => import('../pages/CollaborationPage'));
 export const PluginMarketplacePage = lazy(() => import('../pages/PluginMarketplacePage'));
+export const AgentMarketplacePage = lazy(() => import('../pages/AgentMarketplacePage'));
 export const PluginDocsPage = lazy(() => import('../pages/PluginDocsPage'));
 export const ApiGatewayPage = lazy(() => import('../pages/ApiGatewayPage'));
 export const SecurityDashboardPage = lazy(() => import('../pages/SecurityDashboardPage'));
+export const CompliancePage = lazy(() => import('../pages/CompliancePage'));
 export const ImageStudioPage = lazy(() => import('../pages/ImageStudioPage'));
 export const VideoStudioPage = lazy(() => import('../pages/VideoStudioPage'));
 export const VoiceStudioPage = lazy(() => import('../pages/VoiceStudioPage'));

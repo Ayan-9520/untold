@@ -8,9 +8,9 @@ import SectionHeader from '../components/ui/SectionHeader';
 import ContentFilterBar from '../components/ui/ContentFilterBar';
 import { SearchIcon } from '../components/icons';
 import { EXPLORE_SPORTS, EXPLORE_CATEGORIES, SORT_OPTIONS } from '../data/siteConfig';
-import { videoCatalog } from '../data/videoCatalog';
 import {
-  exploreSearch,
+  exploreSearchAsync,
+  fetchVideoCatalog,
   filterVideosBySport,
   sortVideos,
   getRecommendedVideos,
@@ -45,6 +45,29 @@ export default function Explore() {
   const [sport, setSport] = useState(params.get('sport') || 'All');
   const [category, setCategory] = useState(params.get('category') || 'all');
   const [vertical, setVertical] = useState(params.get('vertical') || '');
+  const [sort, setSort] = useState(params.get('sort') || 'popular');
+  const [catalog, setCatalog] = useState([]);
+  const [searchResults, setSearchResults] = useState({ videos: [] });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchVideoCatalog()
+      .then(setCatalog)
+      .catch(() => setCatalog([]))
+      .finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => {
+    if (!query.trim()) {
+      setSearchResults({ videos: [] });
+      return;
+    }
+    let cancelled = false;
+    exploreSearchAsync(query)
+      .then((r) => { if (!cancelled) setSearchResults(r); })
+      .catch(() => { if (!cancelled) setSearchResults({ videos: [] }); });
+    return () => { cancelled = true; };
+  }, [query]);
 
   useEffect(() => {
     const next = new URLSearchParams();
@@ -56,18 +79,16 @@ export default function Explore() {
     setParams(next, { replace: true });
   }, [query, sport, category, sort, vertical, setParams]);
 
-  const searchResults = useMemo(() => exploreSearch(query), [query]);
-
   const filteredItems = useMemo(() => {
-    let list = query.trim() ? searchResults.videos : videoCatalog;
+    let list = query.trim() ? searchResults.videos : catalog;
     if (category !== 'all') list = list.filter((v) => v.category === category);
     if (vertical) list = list.filter((v) => v.vertical === vertical);
     list = filterVideosBySport(list, sport);
     return sortVideos(list, sort);
-  }, [query, sport, category, sort, vertical, searchResults.videos]);
+  }, [query, sport, category, sort, vertical, searchResults.videos, catalog]);
 
-  const trending = getTrendingVideos(8);
-  const recommended = getRecommendedVideos(8);
+  const trending = getTrendingVideos(catalog, 8);
+  const recommended = getRecommendedVideos(catalog, 8);
   const hasActiveFilters = query.trim() || sport !== 'All' || category !== 'all' || vertical;
 
   const categoryOptions = useMemo(

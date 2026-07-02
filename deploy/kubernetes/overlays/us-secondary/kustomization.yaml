@@ -1,0 +1,33 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: untold
+resources:
+  - ../../
+  - ../../global/pdb.yaml
+  - ../../global/worker-hpa.yaml
+
+commonLabels:
+  untold.io/region: us-east-1
+  untold.io/role: secondary
+
+patches:
+  - path: patches/configmap-patch.yaml
+  - path: patches/ingress-patch.yaml
+  - path: patches/disable-beat.yaml
+  - target:
+      kind: Deployment
+      name: untold-api
+    patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 2
+  - target:
+      kind: HorizontalPodAutoscaler
+      name: untold-api-hpa
+    patch: |-
+      - op: replace
+        path: /spec/minReplicas
+        value: 2
+      - op: replace
+        path: /spec/maxReplicas
+        value: 8

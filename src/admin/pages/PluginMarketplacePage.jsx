@@ -15,6 +15,16 @@ const CATEGORIES = [
   { id: 'ui', label: 'UI' },
 ];
 
+function StarRating({ value, count }) {
+  const stars = Math.round(value || 0);
+  return (
+    <span className="text-[10px] dark:text-untold-muted">
+      {'★'.repeat(stars)}{'☆'.repeat(5 - stars)}
+      {count != null && <span className="ml-1">({count})</span>}
+    </span>
+  );
+}
+
 function PluginCard({ plugin, onInstall, onManage }) {
   const badge = plugin.installed
     ? plugin.enabled
@@ -41,8 +51,11 @@ function PluginCard({ plugin, onInstall, onManage }) {
       <p className="text-[10px] dark:text-untold-muted">by {plugin.author}</p>
       <p className="text-xs dark:text-untold-muted mt-2 flex-1 leading-relaxed">{plugin.description}</p>
       <p className="text-[10px] dark:text-untold-muted mt-2">
-        {hooks} hooks · {events} events
+        {hooks} hooks · {events} events · {plugin.install_count ?? 0} installs
       </p>
+      {(plugin.rating_count > 0 || plugin.average_rating > 0) && (
+        <StarRating value={plugin.average_rating} count={plugin.rating_count} />
+      )}
       {plugin.current_version && (
         <p className="text-[10px] dark:text-untold-muted">v{plugin.current_version.version}</p>
       )}
@@ -89,7 +102,28 @@ function SettingsField({ fieldKey, schema, value, onChange }) {
 function ManageDrawer({ installation, plugin, onClose, mutations }) {
   const [settings, setSettings] = useState(installation?.settings || {});
   const [perms, setPerms] = useState(installation?.granted_permissions || []);
+  const [tab, setTab] = useState('settings');
+  const [rating, setRating] = useState(5);
+  const [review, setReview] = useState('');
   const schema = installation?.settings_schema || plugin?.manifest?.settings_schema || {};
+
+  const { data: versions = [] } = useQuery({
+    queryKey: [...pluginKey, 'versions', plugin?.slug],
+    queryFn: () => studioPlatform.listPluginVersions(plugin.slug),
+    enabled: !!plugin?.slug && tab === 'versions',
+  });
+
+  const { data: history = [] } = useQuery({
+    queryKey: [...pluginKey, 'history', installation?.id],
+    queryFn: () => studioPlatform.getPluginInstallationHistory(installation.id),
+    enabled: !!installation?.id && tab === 'history',
+  });
+
+  const { data: ratings = [] } = useQuery({
+    queryKey: [...pluginKey, 'ratings', plugin?.slug],
+    queryFn: () => studioPlatform.listPluginRatings(plugin.slug),
+    enabled: !!plugin?.slug && tab === 'ratings',
+  });
 
   if (!installation) return null;
 
@@ -105,11 +139,26 @@ function ManageDrawer({ installation, plugin, onClose, mutations }) {
           <div>
             <span className="text-3xl">{plugin.icon}</span>
             <h2 className="text-lg font-semibold mt-2">{plugin.name}</h2>
-            <p className="text-xs dark:text-untold-muted mt-1">v{installation.installed_version}</p>
+            <p className="text-xs dark:text-untold-muted mt-1">
+              v{installation.installed_version_label || installation.installed_version}
+            </p>
           </div>
           <button type="button" className="studio-btn studio-btn--ghost text-xs" onClick={onClose}>
             Close
           </button>
+        </div>
+
+        <div className="flex gap-1 mt-4 flex-wrap">
+          {['settings', 'permissions', 'versions', 'history', 'ratings'].map((t) => (
+            <button
+              key={t}
+              type="button"
+              className={`px-2 py-1 rounded text-[10px] capitalize ${tab === t ? 'bg-untold-gold/20 text-untold-gold' : 'dark:text-untold-muted'}`}
+              onClick={() => setTab(t)}
+            >
+              {t}
+            </button>
+          ))}
         </div>
 
         <div className="flex gap-2 mt-4">
@@ -136,6 +185,7 @@ function ManageDrawer({ installation, plugin, onClose, mutations }) {
           </button>
         </div>
 
+        {tab === 'settings' && (
         <section className="mt-6">
           <h3 className="text-xs uppercase tracking-wider dark:text-untold-muted mb-3">Settings</h3>
           <div className="space-y-3">
@@ -157,7 +207,9 @@ function ManageDrawer({ installation, plugin, onClose, mutations }) {
             Save settings
           </button>
         </section>
+        )}
 
+        {tab === 'permissions' && (
         <section className="mt-6">
           <h3 className="text-xs uppercase tracking-wider dark:text-untold-muted mb-3">Permissions</h3>
           <div className="space-y-2">
@@ -176,6 +228,53 @@ function ManageDrawer({ installation, plugin, onClose, mutations }) {
             Update permissions
           </button>
         </section>
+        )}
+
+        {tab === 'versions' && (
+          <section className="mt-6 space-y-2">
+            {versions.map((v) => (
+              <div key={v.id} className="text-xs py-2 border-b dark:border-white/5">
+                <div className="flex justify-between">
+                  <span className="font-mono text-untold-gold">v{v.version_label || v.version}</span>
+                  <span className="dark:text-untold-muted">{v.created_at?.slice(0, 10)}</span>
+                </div>
+                {v.changelog && <p className="dark:text-untold-muted mt-1">{v.changelog}</p>}
+              </div>
+            ))}
+          </section>
+        )}
+
+        {tab === 'history' && (
+          <section className="mt-6 space-y-2">
+            {history.map((h) => (
+              <div key={h.id} className="text-xs py-2 border-b dark:border-white/5">
+                <span className="uppercase text-untold-gold">{h.action}</span>
+                {h.from_version != null && <span className="ml-2 dark:text-untold-muted">v{h.from_version} → v{h.to_version}</span>}
+              </div>
+            ))}
+          </section>
+        )}
+
+        {tab === 'ratings' && (
+          <section className="mt-6 space-y-4">
+            <div className="space-y-2">
+              <label className="text-xs dark:text-untold-muted">Your rating</label>
+              <select className="studio-input text-xs" value={rating} onChange={(e) => setRating(Number(e.target.value))}>
+                {[5, 4, 3, 2, 1].map((n) => <option key={n} value={n}>{n} stars</option>)}
+              </select>
+              <textarea className="studio-input text-xs min-h-[60px]" placeholder="Review (optional)" value={review} onChange={(e) => setReview(e.target.value)} />
+              <button type="button" className="studio-btn studio-btn--primary text-xs w-full" onClick={() => mutations.rate.mutate({ slug: plugin.slug, rating, review })}>
+                Submit rating
+              </button>
+            </div>
+            {ratings.map((r) => (
+              <div key={r.id} className="text-xs py-2 border-b dark:border-white/5">
+                <StarRating value={r.rating} />
+                {r.review && <p className="mt-1 dark:text-untold-muted">{r.review}</p>}
+              </div>
+            ))}
+          </section>
+        )}
 
         <section className="mt-6">
           <h3 className="text-xs uppercase tracking-wider dark:text-untold-muted mb-2">Manifest</h3>
@@ -190,15 +289,19 @@ function ManageDrawer({ installation, plugin, onClose, mutations }) {
 
 export default function PluginMarketplacePage() {
   const [category, setCategory] = useState('all');
+  const [search, setSearch] = useState('');
   const [managePlugin, setManagePlugin] = useState(null);
   const queryClient = useQueryClient();
 
   const { data: overview, isLoading } = useQuery({
-    queryKey: pluginKey,
+    queryKey: [...pluginKey, category, search],
     queryFn: async () => {
+      const params = {};
+      if (category !== 'all') params.category = category;
+      if (search.trim()) params.search = search.trim();
       const [ov, catalog, installed] = await Promise.all([
         studioPlatform.getPluginMarketplaceOverview(),
-        studioPlatform.listMarketplacePlugins(),
+        studioPlatform.listMarketplacePlugins(params),
         studioPlatform.listInstalledPlugins(),
       ]);
       return { ...ov, plugins: catalog, installations: installed };
@@ -242,9 +345,13 @@ export default function PluginMarketplacePage() {
         invalidate();
       },
     }),
+    rate: useMutation({
+      mutationFn: ({ slug, rating, review }) => studioPlatform.ratePlugin(slug, { rating, review }),
+      onSuccess: invalidate,
+    }),
   };
 
-  const plugins = (overview?.plugins || []).filter((p) => category === 'all' || p.category === category);
+  const plugins = overview?.plugins || [];
   const installation = managePlugin
     ? overview?.installations?.find((i) => i.plugin_slug === managePlugin.slug || i.plugin_id === managePlugin.id)
     : null;
@@ -283,7 +390,13 @@ export default function PluginMarketplacePage() {
             </div>
           </div>
 
-          <div className="flex gap-2 mt-6 flex-wrap">
+          <div className="flex gap-2 mt-6 flex-wrap items-center">
+            <input
+              className="studio-input text-xs max-w-xs"
+              placeholder="Search plugins…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
             {CATEGORIES.map((c) => (
               <button
                 key={c.id}

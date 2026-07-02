@@ -1,7 +1,27 @@
-import { CATEGORIES } from '../../data/videoCatalog';
+import { useState, useEffect } from 'react';
+import { api } from '../../api/client';
+
+const FALLBACK_CATEGORIES = [
+  { slug: 'legends', name: 'Legends' },
+  { slug: 'rivalries', name: 'Rivalries' },
+  { slug: 'stories', name: 'Stories' },
+  { slug: 'secrets', name: 'Secrets' },
+];
 
 export default function CategorySlider({ active, onChange, includeAll = true }) {
-  const items = includeAll ? [{ slug: 'all', name: 'All' }, ...CATEGORIES] : CATEGORIES;
+  const [categories, setCategories] = useState(FALLBACK_CATEGORIES);
+
+  useEffect(() => {
+    api.categories.list()
+      .then((items) => {
+        if (items?.length) {
+          setCategories(items.map((c) => ({ slug: c.slug, name: c.name })));
+        }
+      })
+      .catch(() => setCategories(FALLBACK_CATEGORIES));
+  }, []);
+
+  const items = includeAll ? [{ slug: 'all', name: 'All' }, ...categories] : categories;
 
   return (
     <div className="flex gap-2 overflow-x-auto scrollbar-hide px-4 sm:px-6 lg:px-8 pb-1 snap-x snap-mandatory">

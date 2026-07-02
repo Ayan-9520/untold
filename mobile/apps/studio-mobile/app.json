@@ -1,0 +1,37 @@
+{
+  "expo": {
+    "name": "UNTOLD Studio",
+    "slug": "untold-studio-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "untold-studio",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#0a0a0a"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.untold.studio"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#0a0a0a"
+      },
+      "package": "com.untold.studio"
+    },
+    "plugins": [
+      "expo-secure-store",
+      [
+        "expo-notifications",
+        {
+          "color": "#e11d48"
+        }
+      ]
+    ],
+    "extra": {
+      "apiUrl": "http://localhost:8000/api/v1",
+      "appType": "studio"
+    }
+  }
+}

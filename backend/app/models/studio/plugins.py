@@ -51,6 +51,10 @@ class PluginDefinition(Base):
     available_permissions: Mapped[list] = mapped_column(JSONB, default=list, nullable=False)
     backend_entry: Mapped[str | None] = mapped_column(String(200), nullable=True)
     frontend_entry: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    documentation_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    install_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    average_rating: Mapped[float] = mapped_column(Float, default=0, nullable=False)
+    rating_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     created_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
@@ -76,6 +80,7 @@ class PluginVersion(Base):
     default_settings: Mapped[dict] = mapped_column(JSONB, default=dict, nullable=False)
     changelog: Mapped[str | None] = mapped_column(String(500), nullable=True)
     release_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    version_label: Mapped[str] = mapped_column(String(32), default="1.0.0", nullable=False)
     created_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     plugin: Mapped[PluginDefinition] = relationship(
@@ -99,6 +104,9 @@ class PluginInstallation(Base):
     settings: Mapped[dict] = mapped_column(JSONB, default=dict, nullable=False)
     granted_permissions: Mapped[list] = mapped_column(JSONB, default=list, nullable=False)
     status: Mapped[str] = mapped_column(String(32), default="active", nullable=False)
+    organization_id: Mapped[int | None] = mapped_column(
+        ForeignKey("organizations.id", ondelete="SET NULL"), index=True, nullable=True
+    )
     installed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
@@ -147,3 +155,18 @@ class PluginEventLog(Base):
     duration_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
     user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     created_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class PluginRating(Base):
+    __tablename__ = "plugin_ratings"
+    __table_args__ = (UniqueConstraint("plugin_id", "user_id", name="uq_plugin_rating_user"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    plugin_id: Mapped[int] = mapped_column(ForeignKey("plugin_definitions.id", ondelete="CASCADE"), index=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    rating: Mapped[int] = mapped_column(Integer, nullable=False)
+    review: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )

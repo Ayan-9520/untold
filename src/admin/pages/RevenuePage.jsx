@@ -7,7 +7,6 @@ import StatCard from '../components/StatCard';
 import AdminErrorBanner from '../components/AdminErrorBanner';
 import { DollarSignIcon, TrendingUpIcon, DownloadIcon } from '../components/AdminIcons';
 import { dashboard } from '../api/adminApi';
-import { REVENUE_STREAMS } from '../../data/revenueStrategy';
 
 const COLORS = ['#6B7280', '#D4AF37', '#8B5CF6'];
 const tooltipStyle = { backgroundColor: '#141414', border: '1px solid #2a2a2a', borderRadius: '8px', fontSize: '12px' };
@@ -51,6 +50,13 @@ export default function RevenuePage() {
   const planData = Object.entries(revenue?.revenue_by_plan || {}).map(([name, value]) => ({
     name: name.charAt(0).toUpperCase() + name.slice(1),
     value,
+  }));
+
+  const monetizationStreams = planData.map((p) => ({
+    id: p.name.toLowerCase(),
+    icon: '💳',
+    label: `${p.name} subscriptions`,
+    description: `$${Number(p.value || 0).toLocaleString()} monthly revenue`,
   }));
 
   return (
@@ -109,7 +115,7 @@ export default function RevenuePage() {
       <div>
         <h2 className="text-lg font-semibold dark:text-untold-white light:text-black mb-4">Monetization Streams</h2>
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {REVENUE_STREAMS.map((stream) => (
+          {monetizationStreams.map((stream) => (
             <div key={stream.id} className="rounded-xl p-4 border dark:border-white/10 light:border-gray-200">
               <span className="text-2xl">{stream.icon}</span>
               <h3 className="mt-2 font-semibold dark:text-untold-white light:text-black">{stream.label}</h3>

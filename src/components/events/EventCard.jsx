@@ -1,5 +1,5 @@
 import EventCountdown from './EventCountdown';
-import { formatEventDate } from '../../data/eventsCatalog';
+import { formatEventDate } from '../../utils/eventDates';
 
 export default function EventCard({ event, variant = 'upcoming' }) {
   return (

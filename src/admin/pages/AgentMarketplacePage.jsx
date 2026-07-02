@@ -2,6 +2,13 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import StudioPageHeader from '../components/StudioPageHeader';
+import {
+  AgentAnalyticsPanel,
+  AgentLogsPanel,
+  AgentMemoryPanel,
+  AgentMonitoringPanel,
+  AgentSchedulesPanel,
+} from '../components/AgentPlatformPanels';
 import { studioPlatform } from '../api/adminApi';
 import { studioPath } from '../../config/ecosystem';
 
@@ -135,7 +142,7 @@ function ManageDrawer({ installation, agent, onClose, mutations }) {
         </div>
 
         <div className="flex gap-1 mb-4 flex-wrap">
-          {['config', 'permissions', 'history'].map((t) => (
+          {['config', 'permissions', 'memory', 'schedules', 'logs', 'analytics', 'history'].map((t) => (
             <button
               key={t}
               type="button"
@@ -223,6 +230,11 @@ function ManageDrawer({ installation, agent, onClose, mutations }) {
             ))}
           </div>
         )}
+
+        {tab === 'memory' && <AgentMemoryPanel installationId={installation.id} />}
+        {tab === 'schedules' && <AgentSchedulesPanel installationId={installation.id} />}
+        {tab === 'logs' && <AgentLogsPanel installationId={installation.id} />}
+        {tab === 'analytics' && <AgentAnalyticsPanel installationId={installation.id} />}
       </div>
     </div>
   );
@@ -231,6 +243,7 @@ function ManageDrawer({ installation, agent, onClose, mutations }) {
 export default function AgentMarketplacePage() {
   const qc = useQueryClient();
   const [category, setCategory] = useState('all');
+  const [pageTab, setPageTab] = useState('marketplace');
   const [manageAgent, setManageAgent] = useState(null);
 
   const invalidate = () => qc.invalidateQueries({ queryKey: marketplaceKey });
@@ -282,11 +295,31 @@ export default function AgentMarketplacePage() {
   return (
     <div className="studio-page">
       <StudioPageHeader
-        title="AI Agent Marketplace"
-        description="Install, configure, and manage production agents — Research through Publishing"
+        title="AI Agent Platform"
+        description="Install agents from the marketplace, monitor runtime, memory, schedules, and execution logs"
       />
 
-      {isLoading ? (
+      <div className="flex gap-2 mt-4">
+        {[
+          { id: 'marketplace', label: 'Marketplace' },
+          { id: 'monitoring', label: 'Monitoring' },
+        ].map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            className={`px-4 py-2 rounded text-sm ${
+              pageTab === t.id ? 'bg-untold-gold/20 text-untold-gold' : 'dark:text-untold-muted hover:bg-white/5'
+            }`}
+            onClick={() => setPageTab(t.id)}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {pageTab === 'monitoring' ? (
+        <AgentMonitoringPanel />
+      ) : isLoading ? (
         <p className="text-sm dark:text-untold-muted mt-6">Loading marketplace…</p>
       ) : (
         <>

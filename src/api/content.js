@@ -1,42 +1,5 @@
 import { api } from './client';
-import * as mock from '../data/mockContent';
-import { heroContent as heroSlidesContent, heroSlides } from '../data/heroSlides';
-import { originalsCatalog } from '../data/originalsCatalog';
-import { videoCatalog, getVideoById, getByCategory, searchVideos } from '../data/videoCatalog';
-import {
-  eventsCatalog,
-  getFeaturedEvent,
-  getEventsByStatus,
-  getEventsBySport,
-  searchEvents,
-  eventShorts,
-  eventStories,
-} from '../data/eventsCatalog';
-
-function mapCatalogItem(v) {
-  return {
-    id: v.id,
-    slug: v.slug,
-    title: v.title,
-    description: v.description,
-    category: v.sport || v.categoryName || v.category,
-    categorySlug: v.category,
-    sport: v.sport,
-    format: v.format,
-    duration: v.duration,
-    year: v.year,
-    rating: v.rating,
-    image: v.image || v.thumbnail,
-    heroImage: v.image || v.thumbnail,
-    thumbnail: v.thumbnail || v.image,
-    videoUrl: v.trailerUrl,
-    trailerUrl: v.trailerUrl,
-    featured: v.featured,
-    trending: v.trending,
-    views: v.views_count,
-    videoType: v.videoType,
-  };
-}
+import { heroContent as heroSlidesContent, heroSlides as fallbackSlides } from '../data/heroSlides';
 
 export function mapVideo(v) {
   return {
@@ -59,199 +22,159 @@ export function mapVideo(v) {
   };
 }
 
-async function withFallback(fn, fallback) {
-  try {
-    return await fn();
-  } catch (err) {
-    console.warn('[UNTOLD API] fallback to mock:', err.message);
-    return fallback();
-  }
+function buildSlide(video) {
+  const mapped = mapVideo(video);
+  return {
+    id: `hero-${mapped.id}`,
+    featuredId: mapped.id,
+    featuredTitle: mapped.title,
+    featuredTagline: mapped.description?.slice(0, 140) || mapped.category,
+    title: mapped.title,
+    subtitle: mapped.description?.slice(0, 140) || mapped.category,
+    sport: mapped.category,
+    format: mapped.videoType === 'series' ? 'Series' : 'Documentary',
+    heroImage: mapped.heroImage || mapped.image,
+    cardImage: mapped.image,
+    posterImage: mapped.image,
+    fullImage: mapped.heroImage || mapped.image,
+    cta: 'Watch Now',
+    secondaryCta: 'Explore Originals',
+    tagline: mapped.category || 'UNTOLD',
+    rating: mapped.rating,
+    duration: mapped.duration,
+    year: mapped.year,
+    eyebrow: 'UNTOLD ORIGINALS',
+  };
 }
 
 export const contentApi = {
-  getHero: () =>
-    withFallback(
-      async () => {
-        const { items } = await api.videos.list({ featured: true, page_size: 1 });
-        const featured = items[0] ? mapVideo(items[0]) : null;
+  async getHero() {
+    const [featured, trending] = await Promise.all([
+      api.videos.list({ featured: true, page_size: 5 }),
+      api.videos.list({ trending: true, page_size: 5 }),
+    ]);
+    const seen = new Set();
+    const videos = [];
+    for (const v of [...featured.items, ...trending.items]) {
+      if (!seen.has(v.id)) {
+        seen.add(v.id);
+        videos.push(v);
+      }
+    }
+    const slides = videos.length ? videos.map(buildSlide) : fallbackSlides;
+    return {
+      data: {
+        ...heroSlidesContent,
+        slides,
+      },
+    };
+  },
+
+  async getFeatured() {
+    const { items } = await api.videos.list({ featured: true, page_size: 1 });
+    if (!items[0]) throw new Error('No featured video');
+    return { data: mapVideo(items[0]) };
+  },
+
+  async getDocumentaries() {
+    const { items } = await api.videos.list({ video_type: 'documentary', page_size: 50 });
+    return { data: items.map(mapVideo) };
+  },
+
+  async getOriginals() {
+    const { items } = await api.videos.list({ page_size: 50 });
+    const apiItems = items.map((v) => {
+      const m = mapVideo(v);
+      return {
+        ...m,
+        sport: m.category || 'Stories',
+        format: m.videoType === 'series' ? 'Series' : 'Documentary',
+        image: m.image,
+      };
+    });
+    return { data: apiItems };
+  },
+
+  async getLegends() {
+    const { items } = await api.videos.list({ category: 'legends', page_size: 20 });
+    return {
+      data: items.map((v) => {
+        const m = mapVideo(v);
         return {
-          data: {
-            ...heroSlidesContent,
-            slides: heroSlides,
-          },
+          id: m.id,
+          title: m.title.split(':').pop()?.trim() || m.title,
+          subtitle: m.title,
+          description: m.description,
+          image: m.image,
+          category: m.category,
         };
-      },
-      () => ({ data: heroSlidesContent })
-    ),
+      }),
+    };
+  },
 
-  getFeatured: () =>
-    withFallback(
-      async () => {
-        const { items } = await api.videos.list({ featured: true, page_size: 1 });
-        return { data: items[0] ? mapVideo(items[0]) : mapCatalogItem(videoCatalog.find((v) => v.featured) || videoCatalog[0]) };
-      },
-      () => ({
-        data: mapCatalogItem(videoCatalog.find((v) => v.featured) || videoCatalog[0]) || mock.featuredDocumentary,
-      })
-    ),
+  async getRivalries() {
+    const { items } = await api.videos.list({ category: 'rivalries', page_size: 20 });
+    return {
+      data: items.map((v) => {
+        const m = mapVideo(v);
+        return { id: m.id, title: m.title, description: m.description, image: m.image, category: m.category, episodes: 1 };
+      }),
+    };
+  },
 
-  getDocumentaries: () =>
-    withFallback(
-      async () => {
-        const { items } = await api.videos.list({ video_type: 'documentary', page_size: 50 });
-        return { data: items.map(mapVideo) };
-      },
-      () => ({ data: mock.documentaries })
-    ),
+  async getStories() {
+    const { items } = await api.videos.list({ category: 'stories', page_size: 50 });
+    return { data: items.map(mapVideo) };
+  },
 
-  getOriginals: () =>
-    withFallback(
-      async () => {
-        const { items } = await api.videos.list({ page_size: 50 });
-        const apiItems = items.map((v) => {
-          const m = mapVideo(v);
-          return {
-            ...m,
-            sport: m.category || 'Stories',
-            format: m.videoType === 'series' ? 'Series' : 'Documentary',
-            image: m.image,
-          };
-        });
-        const slugs = new Set(apiItems.map((i) => i.slug));
-        const merged = [
-          ...apiItems,
-          ...originalsCatalog.filter((c) => !slugs.has(c.id)),
-        ];
-        return { data: merged };
-      },
-      () => ({ data: getByCategory('originals').map(mapCatalogItem) })
-    ),
+  async getSecrets() {
+    const { items } = await api.videos.list({ category: 'secrets', page_size: 50 });
+    return { data: items.map(mapVideo) };
+  },
 
-  getLegends: () =>
-    withFallback(
-      async () => {
-        const { items } = await api.videos.list({ category: 'legends', page_size: 20 });
-        return {
-          data: items.map((v) => {
-            const m = mapVideo(v);
-            return {
-              id: m.id,
-              title: m.title.split(':').pop()?.trim() || m.title,
-              subtitle: m.title,
-              description: m.description,
-              image: m.image,
-              category: m.category,
-            };
-          }),
-        };
-      },
-      () => ({ data: getByCategory('legends').map((v) => ({
-        id: v.id,
-        title: v.sport,
-        subtitle: v.title,
-        description: v.description,
-        image: v.image,
-        category: v.sport,
-      })) })
-    ),
+  async getTrending() {
+    const { items } = await api.videos.list({ trending: true, page_size: 10 });
+    return { data: items.map(mapVideo) };
+  },
 
-  getRivalries: () =>
-    withFallback(
-      async () => {
-        const { items } = await api.videos.list({ category: 'rivalries', page_size: 20 });
-        return {
-          data: items.map((v) => {
-            const m = mapVideo(v);
-            return { id: m.id, title: m.title, description: m.description, image: m.image, category: m.category, episodes: 1 };
-          }),
-        };
-      },
-      () => ({ data: getByCategory('rivalries').map((v) => ({
-        id: v.id,
-        title: v.title,
-        description: v.description,
-        image: v.image,
-        category: v.sport,
-        episodes: 1,
-      })) })
-    ),
-
-  getStories: () => ({ data: getByCategory('stories').map(mapCatalogItem) }),
-
-  getSecrets: () => ({ data: getByCategory('secrets').map(mapCatalogItem) }),
-
-  getTrending: () =>
-    withFallback(
-      async () => {
-        const { items } = await api.videos.list({ trending: true, page_size: 10 });
-        return { data: items.map(mapVideo) };
-      },
-      () => ({ data: videoCatalog.filter((v) => v.trending).map(mapCatalogItem) })
-    ),
-
-  getShorts: () =>
-    withFallback(
-      async () => {
-        const { items } = await api.videos.list({ video_type: 'short', page_size: 20 });
-        return {
-          data: items.map((v) => ({
-            id: v.id,
-            title: v.title,
-            duration: v.duration,
-            views: `${Math.round((v.views_count || 0) / 1000)}K`,
-            image: v.image_url,
-            videoUrl: v.video_url,
-          })),
-        };
-      },
-      () => ({ data: getByCategory('shorts').map((v) => ({
+  async getShorts() {
+    const { items } = await api.videos.list({ video_type: 'short', page_size: 20 });
+    return {
+      data: items.map((v) => ({
         id: v.id,
         title: v.title,
         duration: v.duration,
-        views: `${Math.round(50 + Math.random() * 200)}K`,
-        image: v.image,
-        videoUrl: v.trailerUrl,
-      })) })
-    ),
+        views: `${Math.round((v.views_count || 0) / 1000)}K`,
+        image: v.image_url,
+        videoUrl: v.video_url,
+      })),
+    };
+  },
 
-  getDocumentaryById: (id) =>
-    withFallback(
-      async () => {
-        const v = await api.videos.get(id);
-        return { data: mapVideo(v) };
-      },
-      async () => {
-        const doc = getVideoById(id) || mock.documentaries.find((d) => d.id === id || String(d.id) === String(id));
-        if (!doc) throw new Error('Not found');
-        return { data: doc.slug ? mapCatalogItem(doc) : doc };
-      }
-    ),
+  async getDocumentaryById(id) {
+    const v = await api.videos.get(id);
+    return { data: mapVideo(v) };
+  },
 
-  getCatalog: () => ({ data: videoCatalog.map(mapCatalogItem) }),
+  async searchCatalog(q) {
+    const { items } = await api.videos.search(q);
+    return { data: items.map(mapVideo) };
+  },
 
-  searchCatalog: (q) => ({ data: searchVideos(q).map(mapCatalogItem) }),
+  async getCatalogByCategory(cat) {
+    const { items } = await api.videos.list({ category: cat, page_size: 50 });
+    return { data: items.map(mapVideo) };
+  },
 
-  getCatalogByCategory: (cat) => ({ data: getByCategory(cat).map(mapCatalogItem) }),
-
-  getEvents: () => ({ data: eventsCatalog }),
-
-  getFeaturedEvent: () => ({ data: getFeaturedEvent() }),
-
-  getEventsByStatus: (status) => ({ data: getEventsByStatus(status) }),
-
-  getEventsBySport: (sport) => ({ data: getEventsBySport(sport) }),
-
-  searchEvents: (q) => ({ data: searchEvents(q) }),
-
-  getEventShorts: () => ({ data: eventShorts }),
-
-  getEventStories: () => ({ data: eventStories }),
-
-  submitContact: (formData) =>
-    withFallback(
-      async () => ({ data: { success: true, message: "Thank you for reaching out. We'll be in touch soon." } }),
-      async () => ({ data: { success: true, message: "Thank you for reaching out. We'll be in touch soon." } })
-    ),
+  async submitContact(formData) {
+    const res = await api.contact.submit({
+      name: formData.name,
+      email: formData.email,
+      subject: formData.subject,
+      message: formData.message,
+    });
+    return { data: { success: true, message: res.message } };
+  },
 };
 
 export default contentApi;

@@ -14,6 +14,10 @@ _INSECURE_SECRET_KEYS = frozenset(
     }
 )
 
+_LOCALHOST_MARKERS = ("localhost", "127.0.0.1", "::1")
+
+_DEMO_PROVIDER_IDS = frozenset({"demo", "media_stub"})
+
 _DEV_SECRET_KEY = "dev-only-" + secrets.token_hex(24)
 
 
@@ -72,6 +76,20 @@ class Settings(BaseSettings):
     seed_database: bool = False
     admin_email: str = "admin@untold.com"
     admin_password: str | None = None
+
+    # Email (SMTP) — optional; logs only when unset
+    smtp_host: str | None = None
+    smtp_port: int = 587
+    smtp_use_tls: bool = True
+    smtp_username: str | None = None
+    smtp_password: str | None = None
+    smtp_from_email: str | None = None
+    frontend_url: str = "http://localhost:5173"
+    password_reset_path: str = "/reset-password"
+
+    # Enterprise compliance (GDPR / SOC2 / ISO27001)
+    compliance_access_log_enabled: bool = True
+    compliance_privacy_policy_version: str = "1.0"
 
     # Google OAuth (Studio + public)
     google_client_id: str | None = None
@@ -214,6 +232,11 @@ class Settings(BaseSettings):
     aws_bedrock_region: str = "us-east-1"
     aws_bedrock_model_id: str = "anthropic.claude-3-haiku-20240307-v1:0"
     storage_default_provider: str = "local"
+    max_upload_bytes: int = 52_428_800
+    ai_allow_demo_in_production: bool = False
+    workflow_event_secret: str | None = None
+    live_webhook_secret: str | None = None
+    sso_allowed_redirect_uris: str = ""
     sportmonks_api_key: str | None = None
     sportradar_api_key: str | None = None
     cricapi_api_key: str | None = None
@@ -223,6 +246,7 @@ class Settings(BaseSettings):
     # Payments
     stripe_secret_key: str | None = None
     stripe_webhook_secret: str | None = None
+    stripe_default_price_id: str | None = None
     razorpay_key_id: str | None = None
     razorpay_key_secret: str | None = None
     razorpay_webhook_secret: str | None = None
@@ -274,6 +298,28 @@ class Settings(BaseSettings):
                 raise ValueError("DEBUG must be false in production")
             if not self.cors_origin_list:
                 raise ValueError("CORS_ORIGINS must include at least one origin in production")
+            if self.trusted_host_list == ["*"]:
+                raise ValueError("TRUSTED_HOSTS must be set to explicit hostnames in production")
+            for label, url in (
+                ("DATABASE_URL", self.database_url),
+                ("REDIS_URL", self.redis_url),
+                ("CELERY_BROKER_URL", self.celery_broker_url),
+                ("CELERY_RESULT_BACKEND", self.celery_result_backend),
+            ):
+                if any(marker in url for marker in _LOCALHOST_MARKERS):
+                    raise ValueError(f"{label} must not reference localhost in production")
+            demo_providers = [
+                self.ai_default_provider,
+                self.embeddings_default_provider,
+                self.vectorstore_default_provider,
+                self.image_default_provider,
+                self.video_default_provider,
+                self.voice_default_provider,
+            ]
+            if any(p in _DEMO_PROVIDER_IDS for p in demo_providers):
+                raise ValueError(
+                    "AI/embeddings/vectorstore default providers must not be 'demo' in production"
+                )
             if self.seed_database and not self.admin_password:
                 raise ValueError(
                     "ADMIN_PASSWORD is required when SEED_DATABASE=true in production"
@@ -287,6 +333,12 @@ class Settings(BaseSettings):
                 )
             if self.encryption_key == self.secret_key:
                 raise ValueError("ENCRYPTION_KEY must differ from SECRET_KEY in production")
+            if self.ai_allow_demo_in_production:
+                raise ValueError("AI_ALLOW_DEMO_IN_PRODUCTION must be false in production")
+            if self.stripe_secret_key and not self.stripe_webhook_secret:
+                raise ValueError("STRIPE_WEBHOOK_SECRET is required when STRIPE_SECRET_KEY is set in production")
+            if self.razorpay_key_secret and not self.razorpay_webhook_secret:
+                raise ValueError("RAZORPAY_WEBHOOK_SECRET is required when Razorpay keys are set in production")
         elif self.seed_database and not self.admin_password:
             raise ValueError("ADMIN_PASSWORD is required when SEED_DATABASE=true")
 
@@ -302,8 +354,18 @@ class Settings(BaseSettings):
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
 
     @property
+    def sso_redirect_uri_allowlist(self) -> list[str]:
+        return [uri.strip() for uri in self.sso_allowed_redirect_uris.split(",") if uri.strip()]
+
+    @property
     def is_production(self) -> bool:
         return self.environment == "production"
+
+    @property
+    def password_reset_url(self) -> str:
+        base = self.frontend_url.rstrip("/")
+        path = self.password_reset_path if self.password_reset_path.startswith("/") else f"/{self.password_reset_path}"
+        return f"{base}{path}"
 
     @property
     def is_development(self) -> bool:
