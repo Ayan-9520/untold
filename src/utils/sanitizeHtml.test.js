@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { sanitizeHtml } from '../sanitizeHtml';
+import { sanitizeHtml } from './sanitizeHtml';
 
 describe('sanitizeHtml', () => {
   it('returns empty string for falsy input', () => {

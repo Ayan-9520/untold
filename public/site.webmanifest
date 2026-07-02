@@ -1,0 +1,17 @@
+{
+  "name": "UNTOLD ORIGINALS",
+  "short_name": "UNTOLD",
+  "description": "The Story Behind The Glory — premium sports documentaries and originals.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0B0B0B",
+  "theme_color": "#0B0B0B",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

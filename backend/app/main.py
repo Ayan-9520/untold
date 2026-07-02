@@ -67,18 +67,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origin_list,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allow_headers=[
-        "Authorization",
-        "Content-Type",
-        "Accept",
-        "X-API-Key",
-        "X-Request-ID",
-        "X-API-Version",
-        "Accept-Version",
-        "X-Organization-ID",
-        "X-Workspace-ID",
-    ],
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 if settings.is_production and settings.trusted_host_list != ["*"]:

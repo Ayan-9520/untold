@@ -4,8 +4,8 @@ set -e
 echo "Validating environment..."
 python -c "from app.core.config import get_settings; get_settings()"
 
-# Only the API service runs migrations (avoids race when celery starts in parallel)
-if [ "$RUN_MIGRATIONS" = "true" ]; then
+# Only the API service runs migrations (celery passes "celery" as argv[1])
+if [ "$RUN_MIGRATIONS" = "true" ] && [ "${1:-}" != "celery" ]; then
   echo "Running database migrations..."
   alembic upgrade head
 

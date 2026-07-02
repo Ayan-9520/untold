@@ -1,5 +1,14 @@
 # Production overrides — use with:
-#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#   cp deploy/env/production.env.example .env
+#   # Fill SECRET_KEY, ENCRYPTION_KEY, POSTGRES_PASSWORD, AI keys, SMTP, payments, S3
+#   ENV_FILE=.env docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+#
+# Optional monitoring (enables OTEL collector):
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.monitoring.yml --profile monitoring up -d
+
+x-prod-env: &prod_env
+  env_file: !override
+    - ${ENV_FILE:-deploy/env/production.env.example}
 
 services:
   db:
@@ -12,14 +21,22 @@ services:
     command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
 
   api:
+    <<: *prod_env
     restart: always
+    ports: []
     environment:
       ENVIRONMENT: production
       DEBUG: "false"
       SEED_DATABASE: "false"
       RATE_LIMIT_ENABLED: "true"
+      RUN_MIGRATIONS: "true"
       LOG_FORMAT: json
-      OTEL_ENABLED: "true"
+      METRICS_ENABLED: "true"
+      OTEL_ENABLED: ${OTEL_ENABLED:-false}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-untold}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-untold_db}
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/1
+      CELERY_RESULT_BACKEND: redis://redis:6379/2
     logging:
       driver: json-file
       options:
@@ -32,25 +49,46 @@ services:
           memory: 2G
 
   celery-worker:
+    <<: *prod_env
     restart: always
     environment:
+      ENVIRONMENT: production
+      DEBUG: "false"
+      SEED_DATABASE: "false"
+      RUN_MIGRATIONS: "false"
       LOG_FORMAT: json
+      DATABASE_URL: postgresql://${POSTGRES_USER:-untold}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-untold_db}
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/1
+      CELERY_RESULT_BACKEND: redis://redis:6379/2
     logging:
       driver: json-file
       options:
         max-size: "50m"
         max-file: "3"
     deploy:
-      replicas: 2
       resources:
         limits:
           cpus: "1"
           memory: 1G
 
   celery-beat:
+    <<: *prod_env
     restart: always
     environment:
+      ENVIRONMENT: production
+      DEBUG: "false"
+      SEED_DATABASE: "false"
+      RUN_MIGRATIONS: "false"
       LOG_FORMAT: json
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/1
+      CELERY_RESULT_BACKEND: redis://redis:6379/2
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "3"
 
   web:
     restart: always
@@ -72,7 +110,7 @@ services:
       db:
         condition: service_healthy
     environment:
-      PGPASSWORD: ${POSTGRES_PASSWORD:-untold_secret}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
       BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-30}
       BACKUP_S3_URI: ${BACKUP_S3_URI:-}
     volumes:

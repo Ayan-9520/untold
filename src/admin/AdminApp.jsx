@@ -32,6 +32,7 @@ export default function AdminApp() {
             }
           >
             <Route index element={<StudioRoute><Pages.DashboardPage /></StudioRoute>} />
+            <Route path="dashboard" element={<StudioRoute><Pages.DashboardPage /></StudioRoute>} />
             <Route path="projects" element={<StudioRoute><Pages.ProjectsPage /></StudioRoute>} />
             <Route path="projects/:id" element={<StudioRoute><Pages.ProjectDetailPage /></StudioRoute>} />
             <Route path="research" element={<StudioRoute><Pages.ResearchPage /></StudioRoute>} />
@@ -59,6 +60,8 @@ export default function AdminApp() {
             <Route path="timeline/:projectId" element={<StudioRoute><Pages.TimelineWorkspacePage /></StudioRoute>} />
             <Route path="content" element={<StudioRoute><Pages.ContentPage /></StudioRoute>} />
             <Route path="content/:projectId" element={<StudioRoute><Pages.PublishingWorkspacePage /></StudioRoute>} />
+            <Route path="publishing" element={<StudioRoute><Pages.ContentPage /></StudioRoute>} />
+            <Route path="publishing/:projectId" element={<StudioRoute><Pages.PublishingWorkspacePage /></StudioRoute>} />
             <Route path="ai" element={<StudioRoute><Pages.AICommandPage /></StudioRoute>} />
             <Route path="images" element={<StudioRoute><Pages.ImageStudioPage /></StudioRoute>} />
             <Route path="videos" element={<StudioRoute><Pages.VideoStudioPage /></StudioRoute>} />
@@ -74,6 +77,7 @@ export default function AdminApp() {
             <Route path="magazine" element={<StudioRoute><Pages.MagazinePage /></StudioRoute>} />
             <Route path="users" element={<StudioRoute><Pages.UsersPage /></StudioRoute>} />
             <Route path="admin" element={<StudioRoute><Pages.AdminPanelPage /></StudioRoute>} />
+            <Route path="settings" element={<StudioRoute><Pages.AdminPanelPage /></StudioRoute>} />
             <Route path="membership" element={<StudioRoute><Pages.MembershipPage /></StudioRoute>} />
             <Route path="analytics" element={<StudioRoute><Pages.AnalyticsPage /></StudioRoute>} />
             <Route path="revenue" element={<StudioRoute><Pages.RevenuePage /></StudioRoute>} />

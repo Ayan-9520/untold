@@ -17,7 +17,7 @@ export default function VideoPlayer({ videoId, fallbackUrl, poster, title, onPro
   useEffect(() => {
     let active = true;
 
-    const useFallback = () => {
+    const applyFallback = () => {
       if (!active) return;
       if (fallbackUrl) {
         setStreamUrl(fallbackUrl);
@@ -34,7 +34,7 @@ export default function VideoPlayer({ videoId, fallbackUrl, poster, title, onPro
     setStreamUrl(null);
 
     if (!videoId) {
-      useFallback();
+      applyFallback();
       return () => { active = false; };
     }
 
@@ -48,11 +48,11 @@ export default function VideoPlayer({ videoId, fallbackUrl, poster, title, onPro
           setLoading(false);
           return;
         }
-        useFallback();
+        applyFallback();
       })
       .catch(() => {
         if (!active) return;
-        useFallback();
+        applyFallback();
       });
 
     return () => { active = false; };

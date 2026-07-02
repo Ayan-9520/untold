@@ -1,7 +1,10 @@
 {
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "https://your-railway-app.up.railway.app/api/$1" },
-    { "source": "/(.*)", "destination": "/index.html" }
+    { "source": "/api/(.*)", "destination": "https://api.untoldoriginals.blog/api/$1" },
+    { "source": "/studio/(.*)", "destination": "/index.html" },
+    { "source": "/developers/(.*)", "destination": "/index.html" },
+    { "source": "/app/(.*)", "destination": "/index.html" },
+    { "source": "/((?!api/).*)", "destination": "/index.html" }
   ],
   "headers": [
     {
